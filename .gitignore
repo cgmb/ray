@@ -1,0 +1,7 @@
+/ray
+*.o
+*.a
+*.so
+.*
+!.gitignore
+!.gitmodule
