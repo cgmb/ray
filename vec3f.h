@@ -86,6 +86,10 @@ inline vec3f operator*(float lhs, const vec3f& rhs) {
   return vec3f(lhs * rhs[0], lhs * rhs[1], lhs * rhs[2]);
 }
 
+inline vec3f operator*(const vec3f& lhs, float rhs) {
+  return rhs * lhs;
+}
+
 inline vec3f normalized(vec3f x) {
   normalize_v3f(x);
   return x;

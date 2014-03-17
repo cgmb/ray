@@ -12,6 +12,11 @@ struct ray {
     return r;
   }
 
+  // returns the position of the ray at t multiples of the ray direction.
+  vec3f position_at(float t) const {
+    return start + (direction * t);
+  }
+
   vec3f start;
   vec3f direction;
 };
@@ -31,7 +36,9 @@ inline bool abs_fuzzy_eq(double lhs, double rhs, double abs_epsilon) {
   return std::abs(lhs - rhs) < abs_epsilon;
 }
 
-inline vec3f near_intersect(const ray& r, const sphere& s) {
+// returns the t value for the near intersect point
+// along the parametric equation of the ray (pos = origin + direction * t)
+inline float near_intersect_param(const ray& r, const sphere& s) {
   assert(abs_fuzzy_eq(magnitude(r.direction), 1, 1e-3));
 
   const vec3f m = r.start - s.center;
@@ -44,7 +51,12 @@ inline vec3f near_intersect(const ray& r, const sphere& s) {
   float x1 = (-md + c) / e;
   float x2 = (-md - c) / e;
 
-  return r.start + (std::min(x1, x2) * r.direction);
+  // todo: discard x1 and x2 if they are < 0
+  return std::min(x1, x2);
+}
+
+inline vec3f near_intersect(const ray& r, const sphere& s) {
+  return r.start + (near_intersect_param(r, s) * r.direction);
 }
 
 #endif

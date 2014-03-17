@@ -12,6 +12,12 @@ struct image {
   vec3f& px(unsigned x, unsigned y);
   const vec3f& px(unsigned x, unsigned y) const;
 
+  bool save_as_png(const char* path) const;
+
+private:
+  unsigned height() const;
+  unsigned width() const;
+
 private:
   unsigned width_;
 };

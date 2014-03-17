@@ -4,7 +4,7 @@ override CFLAGS += -std=c++11 -Werror -Wall -Wextra -Wno-unused-parameter
 release: CFLAGS += -O2
 debug: CFLAGS += -g
 test: CFLAGS += -iquote=$(CURDIR)
-LIBS=-lGLEW -lGL -lGLU -lglut -lm
+LIBS=-lpng -lGLEW -lGL -lGLU -lglut -lm
 EXENAME=ray
 # test directory
 TDIR=test
