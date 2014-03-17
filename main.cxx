@@ -19,9 +19,9 @@ struct light {
 
 int main(int argc, char** argv) {
   vec3f observer = { 0, 0, -10 };
-  vec3f screen_top_left = { 0, 0, 0 };
-  vec3f screen_top_right = { 0, 0, 0 };
-  vec3f screen_bottom_right = { 0, 0, 0 };
+  vec3f screen_top_left = { -5, 5, 0 };
+  vec3f screen_top_right = { 5, 5, 0 };
+  vec3f screen_bottom_right = { 5, -5, 0 };
   resolution res = { 100, 100 };
 
   vec3f screen_offset_x = screen_top_right - screen_top_left;
