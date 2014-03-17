@@ -1,8 +1,6 @@
 #ifndef VEC3F_H
 #define VEC3F_H
 
-// My addition to the md2.h reader.
-// vec3_t was originally float[3], but C arrays behave oddly.
 // Switching to std::array makes it behave more like a normal type.
 
 #include <array>
