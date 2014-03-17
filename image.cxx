@@ -39,8 +39,8 @@ struct image_24bit {
 
 struct png_write_context {
   png_write_context()
-  : png_ptr(nullptr)
-  , info_ptr(nullptr)
+  : png_ptr(0)
+  , info_ptr(0)
   {
   }
 

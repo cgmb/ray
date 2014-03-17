@@ -1,6 +1,6 @@
 export CC=g++
 export CFLAGS
-override CFLAGS += -std=c++11 -Werror -Wall -Wextra -Wno-unused-parameter
+override CFLAGS += -std=c++0x -Werror -Wall -Wextra -Wno-unused-parameter
 release: CFLAGS += -O2
 debug: CFLAGS += -g
 test: CFLAGS += -iquote=$(CURDIR)
