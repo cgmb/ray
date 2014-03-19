@@ -14,6 +14,10 @@ BDIR=.build
 # build directory for tests
 BTDIR=$(BDIR)/$(TDIR)
 
+THIRDPARTY=3rdparty
+LIBPATH=-L$(THIRDPARTY)/lib
+INCPATH=-I$(THIRDPARTY)/include
+
 all: release
 
 release: main
@@ -24,8 +28,9 @@ bdir:
 	mkdir -p $(BDIR)
 
 main: main.cxx vector_math.h vector_debug.h vec3f.h image bdir
-	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS)
-	$(CC) $(BDIR)/main.o $(BDIR)/image.o -o $(EXENAME) $(CFLAGS) $(LIBS)
+	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS) $(INCPATH) 
+	$(CC) $(BDIR)/main.o $(BDIR)/image.o -o $(EXENAME) $(CFLAGS)\
+		$(LIBPATH) -lyaml-cpp $(LIBS)
 
 image: image.cxx image.h vec3f.h bdir
 	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS)

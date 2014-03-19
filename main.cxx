@@ -1,7 +1,9 @@
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 #include "geometry.h"
 #include "image.h"
 #include "vec3f.h"
@@ -55,28 +57,132 @@ ray_sphere_intersect cast_ray(
   return rsi;
 }
 
-int main(int argc, char** argv) {
-  vec3f observer = { 0, 0, -10 };
-  vec3f screen_top_left = { -5, 5, 0 };
-  vec3f screen_top_right = { 5, 5, 0 };
-  vec3f screen_bottom_right = { 5, -5, 0 };
-  resolution res = { 100, 100 };
+enum {
+  INVALID_ARG = -1,
+  SCENE_FILE_ARG,
+  OUTPUT_FILE_ARG,
+};
 
-  vec3f screen_offset_x = screen_top_right - screen_top_left;
-  vec3f screen_offset_y = screen_bottom_right - screen_top_right;
+struct user_inputs {
+  user_inputs()
+    : scene_file(0)
+    , output_file(0)
+    , requests_help(false)
+  {
+  }
 
-  vec3f screen_offset_per_px_x = (1.f / res.x) * screen_offset_x;
-  vec3f screen_offset_per_px_y = (1.f / res.y) * screen_offset_y;
+  const char* scene_file;
+  const char* output_file;
+  bool requests_help;
+};
 
-  image img(res.x, res.y);
+user_inputs parse_inputs(int argc, char** argv) {
+  user_inputs in;
+  int next_expected_arg = INVALID_ARG;
+  for (int i = 1; i < argc; ++i) {
+    if (next_expected_arg == SCENE_FILE_ARG) {
+      in.scene_file = argv[i];
+      next_expected_arg = INVALID_ARG;
+    } else if (next_expected_arg == OUTPUT_FILE_ARG) {
+      in.output_file = argv[i];
+      next_expected_arg = INVALID_ARG;
+    } else if (!strcmp(argv[i], "--scene")) {
+      next_expected_arg = SCENE_FILE_ARG;
+    } else if (!strcmp(argv[i], "--output")) {
+      next_expected_arg = OUTPUT_FILE_ARG;
+    } else if (!strcmp(argv[i], "--help")) {
+      in.requests_help = true;
+    } else {
+      std::cerr << "Unknown input: " << argv[i] << std::endl;
+    }
+  }
+  return in;
+}
+
+void print_help() {
+
+}
+
+struct scene {
+  resolution res;
+
+  vec3f observer;
+  vec3f screen_top_left;
+  vec3f screen_top_right;
+  vec3f screen_bottom_right;
 
   std::vector<sphere> geometry;
-  sphere s = { vec3f(0, 0, 10), 3 };
-  geometry.push_back(s);
-
   std::vector<light> lights;
-  light l = { vec3f(0, 0, -10), vec3f(1, 1, 1) };
-  lights.push_back(l);
+
+  vec3f screen_offset_per_px_x() const {
+    vec3f screen_offset_x = screen_top_right - screen_top_left;
+    return (1.f / res.x) * screen_offset_x;
+  }
+
+  vec3f screen_offset_per_px_y() const {
+    vec3f screen_offset_y = screen_bottom_right - screen_top_right;
+    return (1.f / res.y) * screen_offset_y;
+  }
+};
+
+vec3f parse_vec3f_node(const YAML::Node& node) {
+  vec3f value;
+  if (node.size() == 3u) {
+    value[0] = node[0].as<float>();
+    value[1] = node[1].as<float>();
+    value[2] = node[2].as<float>();
+  } else {
+    std::cerr << node.Tag() << " is a vec3f, which requires 3 values, not "
+      << node.size() << "." << std::endl;
+    throw std::runtime_error("Incorrect number of nodes on vec3f");
+  }
+  return value;
+}
+
+scene load_scene_from_file(const char* scene_file) {
+  scene s;
+
+  YAML::Node config = YAML::LoadFile(scene_file);
+  if (YAML::Node observer = config["observer"]) {
+    s.observer = parse_vec3f_node(observer);
+  } else {
+    std::cerr << "Scene requires observer!" << std::endl;
+  }
+
+//  s.observer = vec3f{ 0, 0, -10 };
+  s.screen_top_left = vec3f{ -5, 5, 0 };
+  s.screen_top_right = vec3f{ 5, 5, 0 };
+  s.screen_bottom_right = vec3f{ 5, -5, 0 };
+  s.res = resolution{ 100, 100 };
+  s.geometry.push_back(sphere{ vec3f(0, 0, 10), 3 });
+  s.lights.push_back(light{ vec3f(0, 0, -10), vec3f(1, 1, 1) });
+  return s;
+}
+
+const char* get_with_default(const char* primary, const char* fallback) {
+  return primary ? primary : fallback;
+}
+
+int main(int argc, char** argv) {
+  user_inputs user = parse_inputs(argc, argv);
+  if (user.requests_help) {
+    print_help();
+    std::exit(0);
+  }
+
+  scene s = load_scene_from_file(
+    get_with_default(user.scene_file, "scene.yml"));
+
+  vec3f observer = s.observer;
+  vec3f screen_top_left = s.screen_top_left;
+  std::vector<sphere> geometry = s.geometry;
+  std::vector<light> lights = s.lights;
+  resolution res = s.res;
+
+  vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
+  vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
+
+  image img(res.x, res.y);
 
   for (unsigned y = 0u; y < res.y; ++y) {
     for (unsigned x = 0u; x < res.x; ++x) {
@@ -95,7 +201,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  if (!img.save_as_png("output.png")) {
+  if (!img.save_as_png(get_with_default(user.output_file, "output.png"))) {
     return 1;
   }
   
