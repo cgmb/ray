@@ -1,14 +1,14 @@
 resolution: [100, 100]
 observer:   [ 0,  0, -10]
 screen:
-  top_left:     [-5, -5,  0]
+  top_left:     [-5,  5,  0]
   top_right:    [ 5,  5,  0]
   bottom_right: [ 5, -5,  0]
 
 geometry:
   spheres:
     - center: [  0,  0, 10]
-      radius: 1
+      radius: 1.5
 
 lights:
   points:

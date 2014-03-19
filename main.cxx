@@ -3,21 +3,17 @@
 #include <iostream>
 #include <limits>
 #include <vector>
-#include <yaml-cpp/yaml.h>
 #include "geometry.h"
 #include "image.h"
+#include "scene.h"
 #include "vec3f.h"
 
 using std::placeholders::_1;
 
-struct resolution {
-  unsigned x;
-  unsigned y;
-};
-
-struct light {
-  vec3f position;
-  vec3f color;
+enum {
+  EXIT_OK = 0,
+  EXIT_FAIL_SAVE,
+  EXIT_FAIL_LOAD,
 };
 
 struct ray_sphere_intersect {
@@ -103,60 +99,8 @@ void print_help() {
 
 }
 
-struct scene {
-  resolution res;
-
-  vec3f observer;
-  vec3f screen_top_left;
-  vec3f screen_top_right;
-  vec3f screen_bottom_right;
-
-  std::vector<sphere> geometry;
-  std::vector<light> lights;
-
-  vec3f screen_offset_per_px_x() const {
-    vec3f screen_offset_x = screen_top_right - screen_top_left;
-    return (1.f / res.x) * screen_offset_x;
-  }
-
-  vec3f screen_offset_per_px_y() const {
-    vec3f screen_offset_y = screen_bottom_right - screen_top_right;
-    return (1.f / res.y) * screen_offset_y;
-  }
-};
-
-vec3f parse_vec3f_node(const YAML::Node& node) {
-  vec3f value;
-  if (node.size() == 3u) {
-    value[0] = node[0].as<float>();
-    value[1] = node[1].as<float>();
-    value[2] = node[2].as<float>();
-  } else {
-    std::cerr << node.Tag() << " is a vec3f, which requires 3 values, not "
-      << node.size() << "." << std::endl;
-    throw std::runtime_error("Incorrect number of nodes on vec3f");
-  }
-  return value;
-}
-
-scene load_scene_from_file(const char* scene_file) {
-  scene s;
-
-  YAML::Node config = YAML::LoadFile(scene_file);
-  if (YAML::Node observer = config["observer"]) {
-    s.observer = parse_vec3f_node(observer);
-  } else {
-    std::cerr << "Scene requires observer!" << std::endl;
-  }
-
-//  s.observer = vec3f{ 0, 0, -10 };
-  s.screen_top_left = vec3f{ -5, 5, 0 };
-  s.screen_top_right = vec3f{ 5, 5, 0 };
-  s.screen_bottom_right = vec3f{ 5, -5, 0 };
-  s.res = resolution{ 100, 100 };
-  s.geometry.push_back(sphere{ vec3f(0, 0, 10), 3 });
-  s.lights.push_back(light{ vec3f(0, 0, -10), vec3f(1, 1, 1) });
-  return s;
+std::ostream& operator<<(std::ostream& out, const vec3f& v) {
+  return out << "[" << v[0] << ", " << v[1] << ", " << v[2] << "]";
 }
 
 const char* get_with_default(const char* primary, const char* fallback) {
@@ -167,20 +111,20 @@ int main(int argc, char** argv) {
   user_inputs user = parse_inputs(argc, argv);
   if (user.requests_help) {
     print_help();
-    std::exit(0);
+    std::exit(EXIT_OK);
   }
 
-  scene s = load_scene_from_file(
-    get_with_default(user.scene_file, "scene.yml"));
+  scene s = try_load_scene_from_file(
+    get_with_default(user.scene_file, "scene.yml"), EXIT_FAIL_LOAD);
 
-  vec3f observer = s.observer;
-  vec3f screen_top_left = s.screen_top_left;
-  std::vector<sphere> geometry = s.geometry;
-  std::vector<light> lights = s.lights;
-  resolution res = s.res;
+  const vec3f observer = s.observer;
+  const vec3f screen_top_left = s.screen_top_left;
+  const std::vector<sphere> geometry = s.geometry;
+  const std::vector<light> lights = s.lights;
+  const resolution res = s.res;
 
-  vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
-  vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
+  const vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
+  const vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
 
   image img(res.x, res.y);
 
@@ -202,8 +146,8 @@ int main(int argc, char** argv) {
   }
 
   if (!img.save_as_png(get_with_default(user.output_file, "output.png"))) {
-    return 1;
+    return EXIT_FAIL_SAVE;
   }
   
-  return 0;
+  return EXIT_OK;
 }

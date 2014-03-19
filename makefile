@@ -18,7 +18,9 @@ THIRDPARTY=3rdparty
 LIBPATH=-L$(THIRDPARTY)/lib
 INCPATH=-I$(THIRDPARTY)/include
 
-all: release
+all: quick
+
+quick: main
 
 release: main
 
@@ -27,13 +29,16 @@ debug: main
 bdir:
 	mkdir -p $(BDIR)
 
-main: main.cxx vector_math.h vector_debug.h vec3f.h image bdir
-	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS) $(INCPATH) 
-	$(CC) $(BDIR)/main.o $(BDIR)/image.o -o $(EXENAME) $(CFLAGS)\
-		$(LIBPATH) -lyaml-cpp $(LIBS)
+main: main.cxx vector_math.h vector_debug.h vec3f.h image scene bdir
+	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS)
+	$(CC) $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o -o $(EXENAME)\
+		 $(CFLAGS) $(LIBPATH) -lyaml-cpp $(LIBS)
 
 image: image.cxx image.h vec3f.h bdir
 	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS)
+
+scene: scene.cxx scene.h vec3f.h bdir
+	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS) $(INCPATH) 
 
 run:
 	./$(EXENAME)
