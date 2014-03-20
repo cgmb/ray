@@ -2,6 +2,7 @@
 #define GEOMETRY_H
 
 #include <algorithm>
+#include <limits>
 #include <cassert>
 #include <cmath>
 #include "vec3f.h"
@@ -45,14 +46,21 @@ inline float near_intersect_param(const ray& r, const sphere& s) {
   const vec3f d = r.direction;
 
   float md = dot(m,d);
-  float c = std::sqrt(md*md - (dot(d,d) * (dot(m,m) - s.radius_squared)));
-  float e = dot(d,d);
+  float dd = 1.f; // dot(d,d);
+  float c = std::sqrt(md*md - (dd * (dot(m,m) - s.radius_squared)));
+  if (std::isnan(c)) {
+    return c;
+  }
 
-  float x1 = (-md + c) / e;
-  float x2 = (-md - c) / e;
-
-  // todo: discard x1 and x2 if they are < 0
-  return std::min(x1, x2);
+  float x1 = (-md - c) / dd;
+  float x2 = (-md + c) / dd;
+  if (x2 < 0.f) {
+    return std::numeric_limits<float>::quiet_NaN();
+  } else if (x1 < 0.f) {
+    return x2;
+  } else {
+    return x1;
+  }
 }
 
 inline vec3f near_intersect(const ray& r, const sphere& s) {

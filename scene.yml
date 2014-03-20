@@ -10,6 +10,9 @@ geometry:
     - center: [  0,  0, 10]
       radius: 1.5
 
+    - center: [  2,  3, 10]
+      radius: 2
+
 lights:
   points:
     - position: [ 0, 0, 10]

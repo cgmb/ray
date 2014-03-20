@@ -45,8 +45,15 @@ RTEST(ray_miss_sphere,
     ray::from_point_vector(vec3f(-3,1,1), normalized(vec3f(2,3,1))),
     sphere::from_center_radius_squared(vec3f(1,1,1), 4),
     is_null));
+
+RTEST(ray_sphere_behind,
+  ray_sphere_intersect(
+    ray::from_point_vector(vec3f(0,0,0), normalized(vec3f(0,0,1))),
+    sphere::from_center_radius_squared(vec3f(0,0,-4), 4),
+    is_null));
+
 } // namespace
 
 test_results test_geometry() {
-  return ray_through_sphere() % ray_miss_sphere();
+  return ray_through_sphere() % ray_miss_sphere() % ray_sphere_behind();
 }

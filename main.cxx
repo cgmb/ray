@@ -45,6 +45,7 @@ ray_sphere_intersect cast_ray(
   std::vector<float> intersections(geometry.size());
   std::transform(geometry.begin(), geometry.end(), 
     intersections.begin(), intersects_eye_ray_at);
+  std::remove_if(intersections.begin(), intersections.end(), isnanf);
   auto near_it = std::min_element(intersections.cbegin(), intersections.cend());
   auto near_geometry_it = geometry.begin() +
     std::distance(intersections.cbegin(), near_it);
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
       vec3f pixel_pos = screen_top_left +
         x * screen_offset_per_px_x +
         y * screen_offset_per_px_y;
-      ray eye_ray = { observer, normalized(pixel_pos - observer) };
+      ray eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
       ray_sphere_intersect rsi = cast_ray(eye_ray, geometry);
       if (rsi.intersect_exists(geometry)) {
 //        vec3f pos = eye_ray.position_at(rsi.t);

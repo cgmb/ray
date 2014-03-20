@@ -24,13 +24,14 @@ inline test_results operator%(const test_result& lhs, const test_result& rhs) {
   return results;
 }
 
-inline test_results& operator%(test_results& lhs, const test_result& rhs) {
+inline test_results operator%(test_results lhs, const test_result& rhs) {
   lhs.push_back(rhs);
   return lhs;
 }
 
-inline test_results& operator%(const test_result& lhs, test_results& rhs) {
-  return rhs % lhs;
+inline test_results operator%(const test_result& lhs, test_results rhs) {
+  rhs.push_back(lhs);
+  return rhs;
 }
 
 #define RTEST(name, test) test_result name() { return { test, #name }; }
