@@ -46,6 +46,16 @@ sphere parse_sphere_node(const YAML::Node& node) {
   return value;
 }
 
+vec3f retrieve_optional_color(const YAML::Node& node) {
+  vec3f value;
+  if (YAML::Node color = node["color"]) {
+    value = parse_vec3f_node(color);
+  } else {
+    value = vec3f(1, 1, 1);
+  }
+  return value;
+}
+
 scene load_scene_from_file(const char* scene_file) {
   scene s;
   YAML::Node config = YAML::LoadFile(scene_file);
@@ -86,7 +96,8 @@ scene load_scene_from_file(const char* scene_file) {
   if (YAML::Node geometry = config["geometry"]) {
     if (YAML::Node spheres = geometry["spheres"]) {
       for (auto it = spheres.begin(); it != spheres.end(); ++it) {
-        s.geometry.push_back(parse_sphere_node(*it));
+        s.spheres.push_back(parse_sphere_node(*it));
+        s.sphere_colors.push_back(retrieve_optional_color(*it));
       }
     }
   } else {
@@ -112,7 +123,7 @@ scene generate_default_scene() {
   s.screen_top_right = vec3f{ 5, 5, 0 };
   s.screen_bottom_right = vec3f{ 5, -5, 0 };
   s.res = resolution{ 100, 100 };
-  s.geometry.push_back(sphere{ vec3f(0, 0, 10), 3 });
+  s.spheres.push_back(sphere{ vec3f(0, 0, 10), 3 });
   s.lights.push_back(light{ vec3f(0, 0, -10), vec3f(1, 1, 1) });
   return s;
 }

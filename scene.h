@@ -23,7 +23,8 @@ struct scene {
   vec3f screen_top_right;
   vec3f screen_bottom_right;
 
-  std::vector<sphere> geometry;
+  std::vector<sphere> spheres;
+  std::vector<vec3f> sphere_colors;
   std::vector<light> lights;
 
   vec3f screen_offset_per_px_x() const;

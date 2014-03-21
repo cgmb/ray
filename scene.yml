@@ -9,9 +9,11 @@ geometry:
   spheres:
     - center: [  0,  0, 10]
       radius: 1.5
+      color:  [  0,  1,  0]
 
     - center: [  2,  3, 10]
       radius: 2
+      color:  [  1,  0,  0]
 
 lights:
   points:
