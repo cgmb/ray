@@ -18,27 +18,29 @@ THIRDPARTY=3rdparty
 LIBPATH=-L$(THIRDPARTY)/lib
 INCPATH=-I$(THIRDPARTY)/include
 
-all: quick
+.PHONY: all release debug clean run test
 
-quick: main
+all: release
 
-release: main
+release: $(EXENAME)
 
-debug: main
+debug: $(EXENAME)
 
-bdir:
+$(BDIR):
 	mkdir -p $(BDIR)
 
-main: main.cxx vector_math.h vector_debug.h vec3f.h image scene bdir
-	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS)
+$(EXENAME): $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o
 	$(CC) $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o -o $(EXENAME)\
 		 $(CFLAGS) $(LIBPATH) -lyaml-cpp $(LIBS)
 
-image: image.cxx image.h vec3f.h bdir
-	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS)
+$(BDIR)/main.o: main.cxx vector_math.h vector_debug.h vec3f.h | $(BDIR)
+	$(CC) $< -c -o $@ $(CFLAGS)
 
-scene: scene.cxx scene.h vec3f.h bdir
-	$(CC) $< -c -o $(BDIR)/$@.o $(CFLAGS) $(INCPATH) 
+$(BDIR)/image.o: image.cxx image.h vec3f.h | $(BDIR)
+	$(CC) $< -c -o $@ $(CFLAGS)
+
+$(BDIR)/scene.o: scene.cxx scene.h vec3f.h | $(BDIR)
+	$(CC) $< -c -o $@ $(CFLAGS) $(INCPATH) 
 
 run:
 	./$(EXENAME)
@@ -47,13 +49,13 @@ run:
 btdir:
 	mkdir -p $(BTDIR)
 
-test_geometry: $(TDIR)/test_geometry.cxx $(TDIR)/test.h btdir
+test_geometry: $(TDIR)/test_geometry.cxx $(TDIR)/test.h | $(BTDIR)
 	$(CC) $< -c -o $(BTDIR)/$@.o $(CFLAGS)
 
-test_image: $(TDIR)/test_image.cxx $(TDIR)/test.h btdir
+test_image: $(TDIR)/test_image.cxx $(TDIR)/test.h | $(BTDIR)
 	$(CC) $< -c -o $(BTDIR)/$@.o $(CFLAGS)
 
-test_main: $(TDIR)/test_main.cxx btdir
+test_main: $(TDIR)/test_main.cxx | $(BTDIR)
 	$(CC) $< -c -o $(BTDIR)/$@.o $(CFLAGS)
 
 link_test: test_main test_image test_geometry
