@@ -45,8 +45,10 @@ ray_sphere_intersect cast_ray(
   std::vector<float> intersections(geometry.size());
   std::transform(geometry.begin(), geometry.end(), 
     intersections.begin(), intersects_eye_ray_at);
-  std::remove_if(intersections.begin(), intersections.end(), isnanf);
-  auto near_it = std::min_element(intersections.cbegin(), intersections.cend());
+  // if the first element is nan no element will compare as less than it
+  auto begin_near_it = std::find_if_not(
+    intersections.cbegin(), intersections.cend(), isnanf);
+  auto near_it = std::min_element(begin_near_it, intersections.cend());
   auto near_geometry_it = geometry.begin() +
     std::distance(intersections.cbegin(), near_it);
   rsi.t = *near_it;
