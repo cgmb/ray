@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
   }
 
   scene s = try_load_scene_from_file(
-    get_with_default(user.scene_file, "scene.yml"), EXIT_FAIL_LOAD);
+    get_with_default(user.scene_file, "world.yml"), EXIT_FAIL_LOAD);
 
   const vec3f observer = s.observer;
   const vec3f screen_top_left = s.screen_top_left;
