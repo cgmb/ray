@@ -61,6 +61,18 @@ const char* get_with_default(const char* primary, const char* fallback) {
   return primary ? primary : fallback;
 }
 
+vec3f calculate_color_sum(const std::vector<light>& lights) {
+  vec3f color(0,0,0);
+  for (const light& l : lights) {
+    color += l.color;
+  }
+  return color;
+}
+
+vec3f point_slightly_along(const vec3f& point, const vec3f& direction) {
+  return point + (1e-4f * direction);
+}
+
 int main(int argc, char** argv) {
   user_inputs user = parse_inputs(argc, argv);
   if (user.requests_help) {
@@ -92,13 +104,25 @@ int main(int argc, char** argv) {
       ray eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
       ray_sphere_intersect rsi = cast_ray(eye_ray, geometry);
       if (rsi.intersect_exists(geometry)) {
-//        vec3f pos = eye_ray.position_at(rsi.t);
-        color = sphere_colors[rsi.index_in(geometry)];
+        vec3f pos = eye_ray.position_at(rsi.t);
+        std::vector<light> visible_lights;
+        for (const light& l : lights) {
+          ray light_ray = { point_slightly_along(pos, -eye_ray.direction),
+            normalized(l.position - pos)};
+          ray_sphere_intersect light_rsi = cast_ray(light_ray, geometry);
+          if (!light_rsi.intersect_exists(geometry)) {
+            visible_lights.push_back(l);
+          }
+        }
+        vec3f light_color_sum = calculate_color_sum(visible_lights);
+        color = sphere_colors[rsi.index_in(geometry)] * light_color_sum;
       }
 
       img.px(x, y) = color;
     }
   }
+
+  img.clamp_colors();
 
   if (!img.save_as_png(get_with_default(user.output_file, "output.png"))) {
     return EXIT_FAIL_SAVE;

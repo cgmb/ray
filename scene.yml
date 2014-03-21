@@ -1,4 +1,4 @@
-resolution: [100, 100]
+resolution: [600, 600]
 observer:   [ 0,  0, -10]
 screen:
   top_left:     [-5,  5,  0]
@@ -9,12 +9,16 @@ geometry:
   spheres:
     - center: [  0,  0, 10]
       radius: 1.5
-      color:  [  0,  1,  0]
+      color:  [  1,  1,  1]
 
-    - center: [  2,  3, 10]
-      radius: 2
-      color:  [  1,  0,  0]
+    - center: [  -5,  -5, 15]
+      radius: 4
+      color:  [  1,  1,  1]
 
 lights:
   points:
-    - position: [ 0, 0, 10]
+    - position: [ 0, 0, -5]
+      color:    [ 0.125, 0.5, 0.5]
+
+    - position: [ 15, 15, -5]
+      color:    [ .5, 0.25, 0.125]

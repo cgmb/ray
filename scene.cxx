@@ -56,6 +56,22 @@ vec3f retrieve_optional_color(const YAML::Node& node) {
   return value;
 }
 
+light parse_point_light_node(const YAML::Node& node) {
+  light value;
+  if (YAML::Node position = node["position"]) {
+    value.position = parse_vec3f_node(position);
+  } else {
+    throw std::runtime_error("Point light requires position!");
+  }
+
+  if (YAML::Node color = node["color"]) {
+    value.color = parse_vec3f_node(color);
+  } else {
+    throw std::runtime_error("Point light requires color!");
+  }
+  return value;
+}
+
 scene load_scene_from_file(const char* scene_file) {
   scene s;
   YAML::Node config = YAML::LoadFile(scene_file);
@@ -103,6 +119,17 @@ scene load_scene_from_file(const char* scene_file) {
   } else {
     throw std::runtime_error("Scene requires geometry!");
   }
+
+  if (YAML::Node lights = config["lights"]) {
+    if (YAML::Node points = lights["points"]) {
+      for (auto it = points.begin(); it != points.end(); ++it) {
+        s.lights.push_back(parse_point_light_node(*it));
+      }
+    }
+  } else {
+    throw std::runtime_error("Scene requires geometry!");
+  }
+
   return s;
 }
 

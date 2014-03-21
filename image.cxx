@@ -119,6 +119,12 @@ color_24bit vec3f_to_24bit_color(const vec3f& v) {
   color_24bit p = { f2p(v[0]), f2p(v[1]), f2p(v[2]) };
   return p;
 }
+
+vec3f clamp_color(vec3f color) {
+  return vec3f(std::min(color[0], 1.f),
+               std::min(color[1], 1.f),
+               std::min(color[2], 1.f));
+}
   
 } // namespace
 
@@ -150,4 +156,9 @@ bool image::save_as_png(const char* path) const {
   std::transform(pixels.begin(), pixels.end(),
     output_image.pixels.begin(), vec3f_to_24bit_color);
   return save_png_to_file(output_image, path);
+}
+
+void image::clamp_colors() {
+  std::transform(pixels.begin(), pixels.end(),
+    pixels.begin(), clamp_color);
 }

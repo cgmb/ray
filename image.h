@@ -13,6 +13,7 @@ struct image {
   const vec3f& px(unsigned x, unsigned y) const;
 
   bool save_as_png(const char* path) const;
+  void clamp_colors();
 
 private:
   unsigned height() const;

@@ -76,6 +76,14 @@ inline vec3f operator-(vec3f lhs, const vec3f& rhs) {
   return lhs;
 }
 
+inline vec3f operator*(const vec3f& lhs, const vec3f& rhs) {
+  return vec3f(lhs[0] * rhs[0], lhs[1] * rhs[1], lhs[2] * rhs[2]);
+}
+
+inline vec3f operator-(const vec3f& rhs) {
+  return vec3f(-rhs[0], -rhs[1], -rhs[2]);
+}
+
 inline vec3f operator/(const vec3f& lhs, float rhs) {
   return vec3f(lhs[0] / rhs, lhs[1] / rhs, lhs[2] / rhs);
 }
@@ -99,6 +107,12 @@ inline float magnitude(const vec3f& x) {
 
 inline float dot(const vec3f& x, const vec3f& y) {
   return x[0]*y[0] + x[1]*y[1] + x[2]*y[2];
+}
+
+inline vec3f nextafter(const vec3f& x, const vec3f& y) {
+  return vec3f(std::nextafter(x[0], y[0]),
+    std::nextafter(x[1], y[1]),
+    std::nextafter(x[2], y[2]));
 }
 
 #endif
