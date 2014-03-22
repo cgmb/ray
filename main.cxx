@@ -61,9 +61,9 @@ const char* get_with_default(const char* primary, const char* fallback) {
   return primary ? primary : fallback;
 }
 
-vec3f calculate_color_sum(const std::vector<light>& lights) {
+vec3f calculate_color_sum(const std::vector<light_t>& lights) {
   vec3f color(0,0,0);
-  for (const light& l : lights) {
+  for (const light_t& l : lights) {
     color += l.color;
   }
   return color;
@@ -80,15 +80,15 @@ int main(int argc, char** argv) {
     std::exit(EXIT_OK);
   }
 
-  scene s = try_load_scene_from_file(
+  scene_t s = try_load_scene_from_file(
     get_with_default(user.scene_file, "world.yml"), EXIT_FAIL_LOAD);
 
   const vec3f observer = s.observer;
   const vec3f screen_top_left = s.screen_top_left;
-  const std::vector<sphere> geometry = s.spheres;
+  const std::vector<sphere_t> geometry = s.spheres;
   const std::vector<vec3f> sphere_colors = s.sphere_colors;
-  const std::vector<light> lights = s.lights;
-  const resolution res = s.res;
+  const std::vector<light_t> lights = s.lights;
+  const resolution_t res = s.res;
 
   const vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
   const vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
@@ -101,13 +101,13 @@ int main(int argc, char** argv) {
       vec3f pixel_pos = screen_top_left +
         x * screen_offset_per_px_x +
         y * screen_offset_per_px_y;
-      ray eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
+      ray_t eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
       ray_sphere_intersect rsi = cast_ray(eye_ray, geometry);
       if (rsi.intersect_exists(geometry)) {
         vec3f pos = eye_ray.position_at(rsi.t);
-        std::vector<light> visible_lights;
-        for (const light& l : lights) {
-          ray light_ray = { point_slightly_along(pos, -eye_ray.direction),
+        std::vector<light_t> visible_lights;
+        for (const light_t& l : lights) {
+          ray_t light_ray = { point_slightly_along(pos, -eye_ray.direction),
             normalized(l.position - pos)};
           ray_sphere_intersect light_rsi = cast_ray(light_ray, geometry);
           if (!light_rsi.intersect_exists(geometry)) {

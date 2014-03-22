@@ -15,8 +15,8 @@ vec3f parse_vec3f_node(const YAML::Node& node) {
   return value;
 }
 
-resolution parse_resolution_node(const YAML::Node& node) {
-  resolution value;
+resolution_t parse_resolution_node(const YAML::Node& node) {
+  resolution_t value;
   if (node.size() == 2u) {
     value.x = node[0].as<float>();
     value.y = node[1].as<float>();
@@ -28,8 +28,8 @@ resolution parse_resolution_node(const YAML::Node& node) {
   return value;
 }
 
-sphere parse_sphere_node(const YAML::Node& node) {
-  sphere value;
+sphere_t parse_sphere_node(const YAML::Node& node) {
+  sphere_t value;
   if (YAML::Node center = node["center"]) {
     value.center = parse_vec3f_node(center);
   } else {
@@ -56,8 +56,8 @@ vec3f retrieve_optional_color(const YAML::Node& node) {
   return value;
 }
 
-light parse_point_light_node(const YAML::Node& node) {
-  light value;
+light_t parse_point_light_node(const YAML::Node& node) {
+  light_t value;
   if (YAML::Node position = node["position"]) {
     value.position = parse_vec3f_node(position);
   } else {
@@ -72,8 +72,8 @@ light parse_point_light_node(const YAML::Node& node) {
   return value;
 }
 
-scene load_scene_from_file(const char* scene_file) {
-  scene s;
+scene_t load_scene_from_file(const char* scene_file) {
+  scene_t s;
   YAML::Node config = YAML::LoadFile(scene_file);
   if (YAML::Node observer = config["observer"]) {
     s.observer = parse_vec3f_node(observer);
@@ -133,7 +133,7 @@ scene load_scene_from_file(const char* scene_file) {
   return s;
 }
 
-scene try_load_scene_from_file(const char* scene_file, int error_exit_code) {
+scene_t try_load_scene_from_file(const char* scene_file, int error_exit_code) {
   try {
     return load_scene_from_file(scene_file);
   } catch (const std::exception& e) {
@@ -143,14 +143,14 @@ scene try_load_scene_from_file(const char* scene_file, int error_exit_code) {
   }
 }
 
-scene generate_default_scene() {
-  scene s;
+scene_t generate_default_scene() {
+  scene_t s;
   s.observer = vec3f{ 0, 0, -10 };
   s.screen_top_left = vec3f{ -5, 5, 0 };
   s.screen_top_right = vec3f{ 5, 5, 0 };
   s.screen_bottom_right = vec3f{ 5, -5, 0 };
-  s.res = resolution{ 100, 100 };
-  s.spheres.push_back(sphere{ vec3f(0, 0, 10), 3 });
-  s.lights.push_back(light{ vec3f(0, 0, -10), vec3f(1, 1, 1) });
+  s.res = resolution_t{ 100, 100 };
+  s.spheres.push_back(sphere_t{ vec3f(0, 0, 10), 3 });
+  s.lights.push_back(light_t{ vec3f(0, 0, -10), vec3f(1, 1, 1) });
   return s;
 }

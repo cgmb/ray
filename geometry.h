@@ -10,9 +10,9 @@
 
 using std::placeholders::_1;
 
-struct ray {
-  static ray from_point_vector(const vec3f& start, const vec3f& direction) {
-    ray r = { start, direction };
+struct ray_t {
+  static ray_t from_point_vector(const vec3f& start, const vec3f& direction) {
+    ray_t r = { start, direction };
     return r;
   }
 
@@ -25,9 +25,11 @@ struct ray {
   vec3f direction;
 };
 
-struct sphere {
-  static sphere from_center_radius_squared(const vec3f& center, float radius_squared) {
-    sphere s = { center, radius_squared };
+struct sphere_t {
+  static sphere_t from_center_radius_squared(
+    const vec3f& center, float radius_squared)
+  {
+    sphere_t s = { center, radius_squared };
     return s;
   }
 
@@ -42,7 +44,7 @@ inline bool abs_fuzzy_eq(double lhs, double rhs, double abs_epsilon) {
 
 // returns the t value for the near intersect point
 // along the parametric equation of the ray (pos = origin + direction * t)
-inline float near_intersect_param(const ray& r, const sphere& s) {
+inline float near_intersect_param(const ray_t& r, const sphere_t& s) {
   assert(abs_fuzzy_eq(magnitude(r.direction), 1, 1e-3));
 
   const vec3f m = r.start - s.center;
@@ -66,19 +68,19 @@ inline float near_intersect_param(const ray& r, const sphere& s) {
   }
 }
 
-inline vec3f near_intersect(const ray& r, const sphere& s) {
+inline vec3f near_intersect(const ray_t& r, const sphere_t& s) {
   return r.start + (near_intersect_param(r, s) * r.direction);
 }
 
 struct ray_sphere_intersect {
   float t;
-  typename std::vector<sphere>::const_iterator near_geometry_it;
+  typename std::vector<sphere_t>::const_iterator near_geometry_it;
 
-  bool intersect_exists(const std::vector<sphere>& s) const {
+  bool intersect_exists(const std::vector<sphere_t>& s) const {
     return !std::isnan(t) && s.end() != near_geometry_it;
   }
 
-  size_t index_in(const std::vector<sphere>& s) const {
+  size_t index_in(const std::vector<sphere_t>& s) const {
     return std::distance(s.begin(), near_geometry_it);
   }
 };
@@ -90,8 +92,8 @@ inline float quiet_nan() {
 }
 
 inline ray_sphere_intersect cast_ray(
-  const ray& eye_ray,
-  const std::vector<sphere>& geometry)
+  const ray_t& eye_ray,
+  const std::vector<sphere_t>& geometry)
 {
   ray_sphere_intersect rsi = { quiet_nan(), geometry.end() };
   if (geometry.empty()) {
