@@ -9,7 +9,7 @@ geometry:
   spheres:
     - center: [  0,  0, 10]
       radius: 1.5
-      color:  [  1,  1,  1]
+      reflectivity: 0.875
 
     - center: [  -5,  -5, 15]
       radius: 4

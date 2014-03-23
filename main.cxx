@@ -5,6 +5,8 @@
 #include "scene.h"
 #include "vec3f.h"
 
+#include "vector_debug.h"
+
 enum {
   EXIT_OK = 0,
   EXIT_FAIL_SAVE,
@@ -61,16 +63,72 @@ const char* get_with_default(const char* primary, const char* fallback) {
   return primary ? primary : fallback;
 }
 
-vec3f calculate_color_sum(const std::vector<light_t>& lights) {
-  vec3f color(0,0,0);
-  for (const light_t& l : lights) {
-    color += l.color;
+enum cast_policy_t {
+  CAST_TO_OBJECT,
+  CAST_TO_LIGHT,
+};
+
+vec3f cast_ray(const ray_t& ray,
+  const scene_t& s,
+  vec3f default_color,
+  cast_policy_t cast_policy,
+  unsigned recursion_depth)
+{
+  vec3f color = default_color;
+
+  ray_sphere_intersect rsi = cast_ray(ray, s.geometry.spheres);
+  if (rsi.intersect_exists(s.geometry.spheres)) {
+    if (cast_policy == CAST_TO_OBJECT) {
+      vec3f pos = ray.position_at(0.9999f * rsi.t);
+      material_t material = s.sphere_materials[rsi.index_in(s.geometry.spheres)];
+      float solid_component = material.opacity - material.reflectivity;
+
+      if (solid_component > 0.f) {
+        vec3f light_color(0,0,0);
+        for (const light_t& light : s.lights) {
+          ray_t light_ray = { pos, normalized(light.position - pos) };
+          light_color += cast_ray(light_ray, s, light.color,
+            CAST_TO_LIGHT, recursion_depth + 1u);
+        }
+        color += solid_component * material.color * light_color;
+      }
+
+      if (material.reflectivity > 0.f) {
+        vec3f normal = rsi.near_geometry_it->normal_at(pos);
+        ray_t reflected_ray = { pos, reflected(ray.direction, normal) };
+        if (recursion_depth < 10u) {
+          color += material.reflectivity * cast_ray(reflected_ray, s,
+            default_color, cast_policy, recursion_depth + 1u);
+        }
+      }
+    } else { // cast_policy == CAST_TO_LIGHT
+      color = vec3f(0,0,0);
+    }
   }
   return color;
 }
 
-vec3f point_slightly_along(const vec3f& point, const vec3f& direction) {
-  return point + (1e-4f * direction);
+image generate_image(const scene_t& s) {
+  const vec3f observer = s.observer;
+  const resolution_t res = s.res;
+  const vec3f screen_top_left = s.screen_top_left;
+  const vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
+  const vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
+
+  image img(res.x, res.y);
+
+  for (unsigned y = 0u; y < res.y; ++y) {
+    for (unsigned x = 0u; x < res.x; ++x) {
+      vec3f background_color = { 0, 0, 0 };
+      vec3f pixel_pos = screen_top_left +
+        x * screen_offset_per_px_x +
+        y * screen_offset_per_px_y;
+      ray_t eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
+      img.px(x, y) = cast_ray(eye_ray, s, background_color, CAST_TO_OBJECT, 0u);
+    }
+  }
+
+  return img;
 }
 
 int main(int argc, char** argv) {
@@ -80,50 +138,11 @@ int main(int argc, char** argv) {
     std::exit(EXIT_OK);
   }
 
-  scene_t s = try_load_scene_from_file(
+  const scene_t scene = try_load_scene_from_file(
     get_with_default(user.scene_file, "world.yml"), EXIT_FAIL_LOAD);
 
-  const vec3f observer = s.observer;
-  const vec3f screen_top_left = s.screen_top_left;
-  const std::vector<sphere_t> geometry = s.spheres;
-  const std::vector<vec3f> sphere_colors = s.sphere_colors;
-  const std::vector<light_t> lights = s.lights;
-  const resolution_t res = s.res;
-
-  const vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
-  const vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
-
-  image img(res.x, res.y);
-
-  for (unsigned y = 0u; y < res.y; ++y) {
-    for (unsigned x = 0u; x < res.x; ++x) {
-      vec3f color = { 0, 0, 0 };
-      vec3f pixel_pos = screen_top_left +
-        x * screen_offset_per_px_x +
-        y * screen_offset_per_px_y;
-      ray_t eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
-      ray_sphere_intersect rsi = cast_ray(eye_ray, geometry);
-      if (rsi.intersect_exists(geometry)) {
-        vec3f pos = eye_ray.position_at(rsi.t);
-        std::vector<light_t> visible_lights;
-        for (const light_t& l : lights) {
-          ray_t light_ray = { point_slightly_along(pos, -eye_ray.direction),
-            normalized(l.position - pos)};
-          ray_sphere_intersect light_rsi = cast_ray(light_ray, geometry);
-          if (!light_rsi.intersect_exists(geometry)) {
-            visible_lights.push_back(l);
-          }
-        }
-        vec3f light_color_sum = calculate_color_sum(visible_lights);
-        color = sphere_colors[rsi.index_in(geometry)] * light_color_sum;
-      }
-
-      img.px(x, y) = color;
-    }
-  }
-
+  image img = generate_image(scene);
   img.clamp_colors();
-
   if (!img.save_as_png(get_with_default(user.output_file, "output.png"))) {
     return EXIT_FAIL_SAVE;
   }

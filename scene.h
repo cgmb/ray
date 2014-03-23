@@ -15,6 +15,13 @@ struct light_t {
   vec3f color;
 };
 
+struct material_t {
+  vec3f color;
+  float opacity;
+  float refractive_index;
+  float reflectivity;
+};
+
 struct scene_t {
   resolution_t res;
 
@@ -23,8 +30,8 @@ struct scene_t {
   vec3f screen_top_right;
   vec3f screen_bottom_right;
 
-  std::vector<sphere_t> spheres;
-  std::vector<vec3f> sphere_colors;
+  geometry_t geometry;
+  std::vector<material_t> sphere_materials;
   std::vector<light_t> lights;
 
   vec3f screen_offset_per_px_x() const;

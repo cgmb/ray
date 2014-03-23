@@ -56,6 +56,24 @@ vec3f retrieve_optional_color(const YAML::Node& node) {
   return value;
 }
 
+material_t retrieve_optional_material(const YAML::Node& node) {
+  material_t value;
+  value.color = retrieve_optional_color(node);
+
+  if (YAML::Node reflectivity = node["reflectivity"]) {
+    value.reflectivity = reflectivity.as<float>();
+  } else if (YAML::Node mirrored = node["mirrored"]) {
+    value.reflectivity = mirrored.as<bool>() ? 1.f : 0.f;
+  } else {
+    value.reflectivity = 0.f;
+  }
+
+  value.refractive_index = 1.f;
+  value.opacity = 1.f;
+
+  return value;
+}
+
 light_t parse_point_light_node(const YAML::Node& node) {
   light_t value;
   if (YAML::Node position = node["position"]) {
@@ -112,8 +130,8 @@ scene_t load_scene_from_file(const char* scene_file) {
   if (YAML::Node geometry = config["geometry"]) {
     if (YAML::Node spheres = geometry["spheres"]) {
       for (auto it = spheres.begin(); it != spheres.end(); ++it) {
-        s.spheres.push_back(parse_sphere_node(*it));
-        s.sphere_colors.push_back(retrieve_optional_color(*it));
+        s.geometry.spheres.push_back(parse_sphere_node(*it));
+        s.sphere_materials.push_back(retrieve_optional_material(*it));
       }
     }
   } else {
@@ -150,7 +168,7 @@ scene_t generate_default_scene() {
   s.screen_top_right = vec3f{ 5, 5, 0 };
   s.screen_bottom_right = vec3f{ 5, -5, 0 };
   s.res = resolution_t{ 100, 100 };
-  s.spheres.push_back(sphere_t{ vec3f(0, 0, 10), 3 });
+  s.geometry.spheres.push_back(sphere_t{ vec3f(0, 0, 10), 3 });
   s.lights.push_back(light_t{ vec3f(0, 0, -10), vec3f(1, 1, 1) });
   return s;
 }

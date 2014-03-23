@@ -52,8 +52,14 @@ RTEST(ray_sphere_behind,
     sphere_t::from_center_radius_squared(vec3f(0,0,-4), 4),
     is_null));
 
-} // namespace
+RTEST(reflect_straight_on_z, []{
+  vec3f reflect = reflected(vec3f(0,0,-1), vec3f(0,0,1));
+  return magnitude(reflect - vec3f(0,0,1)) < 1e-4f;
+});
 
+} // namespace
+#include "vector_debug.h"
 test_results test_geometry() {
-  return ray_through_sphere() % ray_miss_sphere() % ray_sphere_behind();
+  return ray_through_sphere() % ray_miss_sphere() % ray_sphere_behind() %
+    reflect_straight_on_z();
 }

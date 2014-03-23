@@ -6,14 +6,14 @@
 #include <limits>
 #include <cassert>
 #include <cmath>
+#include <vector>
 #include "vec3f.h"
 
 using std::placeholders::_1;
 
 struct ray_t {
   static ray_t from_point_vector(const vec3f& start, const vec3f& direction) {
-    ray_t r = { start, direction };
-    return r;
+    return ray_t{ start, direction };
   }
 
   // returns the position of the ray at t multiples of the ray direction.
@@ -29,8 +29,11 @@ struct sphere_t {
   static sphere_t from_center_radius_squared(
     const vec3f& center, float radius_squared)
   {
-    sphere_t s = { center, radius_squared };
-    return s;
+    return sphere_t{ center, radius_squared };
+  }
+
+  vec3f normal_at(const vec3f& position) const {
+    return normalized(position - center);
   }
 
   vec3f center;
@@ -40,6 +43,12 @@ struct sphere_t {
 // todo: move to more appropriate header
 inline bool abs_fuzzy_eq(double lhs, double rhs, double abs_epsilon) {
   return std::abs(lhs - rhs) < abs_epsilon;
+}
+
+inline float quiet_nan() {
+  static_assert(std::numeric_limits<float>::has_quiet_NaN,
+    "Implementation requires NaN");
+  return std::numeric_limits<float>::quiet_NaN();
 }
 
 // returns the t value for the near intersect point
@@ -60,7 +69,7 @@ inline float near_intersect_param(const ray_t& r, const sphere_t& s) {
   float x1 = (-md - c) / dd;
   float x2 = (-md + c) / dd;
   if (x2 < 0.f) {
-    return std::numeric_limits<float>::quiet_NaN();
+    return quiet_nan();
   } else if (x1 < 0.f) {
     return x2;
   } else {
@@ -85,12 +94,6 @@ struct ray_sphere_intersect {
   }
 };
 
-inline float quiet_nan() {
-  static_assert(std::numeric_limits<float>::has_quiet_NaN,
-    "Implementation requires NaN");
-  return std::numeric_limits<float>::quiet_NaN();
-}
-
 inline ray_sphere_intersect cast_ray(
   const ray_t& eye_ray,
   const std::vector<sphere_t>& geometry)
@@ -114,6 +117,21 @@ inline ray_sphere_intersect cast_ray(
   rsi.t = *near_it;
   rsi.near_geometry_it = near_geometry_it;
   return rsi;
+}
+
+struct geometry_t {
+  std::vector<sphere_t> spheres;
+};
+
+inline ray_sphere_intersect cast_ray(
+  const ray_t& eye_ray,
+  const geometry_t& geometry)
+{
+  return cast_ray(eye_ray, geometry.spheres);
+}
+
+inline vec3f reflected(const vec3f& incident, const vec3f& normal) {
+  return -2 * dot(incident, normal) * normal + incident;
 }
 
 #endif

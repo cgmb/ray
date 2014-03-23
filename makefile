@@ -49,7 +49,8 @@ run:
 $(BTDIR):
 	mkdir -p $(BTDIR)
 
-$(BTDIR)/test_geometry.o: $(TDIR)/test_geometry.cxx $(TDIR)/test.h | $(BTDIR)
+$(BTDIR)/test_geometry.o: $(TDIR)/test_geometry.cxx $(TDIR)/test.h\
+	geometry.h | $(BTDIR)
 	$(CC) $< -c -o $@ $(CFLAGS)
 
 $(BTDIR)/test_image.o: $(TDIR)/test_image.cxx $(TDIR)/test.h | $(BTDIR)
