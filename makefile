@@ -8,7 +8,7 @@ LIBS=-lpng -lGLEW -lGL -lGLU -lglut -lm
 EXENAME=ray
 # test directory
 TDIR=test
-TEXENAME=ray
+TEXENAME=run_tests
 # build directory
 BDIR=.build
 # build directory for tests
@@ -33,7 +33,7 @@ $(EXENAME): $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o
 	$(CC) $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o -o $(EXENAME)\
 		 $(CFLAGS) $(LIBPATH) -lyaml-cpp $(LIBS)
 
-$(BDIR)/main.o: main.cxx vector_math.h vector_debug.h vec3f.h | $(BDIR)
+$(BDIR)/main.o: main.cxx *.h | $(BDIR)
 	$(CC) $< -c -o $@ $(CFLAGS)
 
 $(BDIR)/image.o: image.cxx image.h vec3f.h | $(BDIR)
@@ -46,23 +46,24 @@ run:
 	./$(EXENAME)
 
 # tests
-btdir:
+$(BTDIR):
 	mkdir -p $(BTDIR)
 
-test_geometry: $(TDIR)/test_geometry.cxx $(TDIR)/test.h | $(BTDIR)
-	$(CC) $< -c -o $(BTDIR)/$@.o $(CFLAGS)
+$(BTDIR)/test_geometry.o: $(TDIR)/test_geometry.cxx $(TDIR)/test.h | $(BTDIR)
+	$(CC) $< -c -o $@ $(CFLAGS)
 
-test_image: $(TDIR)/test_image.cxx $(TDIR)/test.h | $(BTDIR)
-	$(CC) $< -c -o $(BTDIR)/$@.o $(CFLAGS)
+$(BTDIR)/test_image.o: $(TDIR)/test_image.cxx $(TDIR)/test.h | $(BTDIR)
+	$(CC) $< -c -o $@ $(CFLAGS)
 
-test_main: $(TDIR)/test_main.cxx | $(BTDIR)
-	$(CC) $< -c -o $(BTDIR)/$@.o $(CFLAGS)
+$(BTDIR)/test_main.o: $(TDIR)/test_main.cxx | $(BTDIR)
+	$(CC) $< -c -o $@ $(CFLAGS)
 
-link_test: test_main test_image test_geometry
+$(TEXENAME): $(BTDIR)/test_main.o $(BTDIR)/test_image.o\
+	$(BTDIR)/test_geometry.o
 	$(CC) $(BTDIR)/test_main.o $(BTDIR)/test_image.o\
 		$(BTDIR)/test_geometry.o -o $(TEXENAME) $(CFLAGS) $(LIBS)
 
-test: link_test
+test: $(TEXENAME)
 	./$(TEXENAME)
 
 clean:

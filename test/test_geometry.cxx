@@ -5,7 +5,7 @@
 
 namespace {
 template<class T>
-bool ray_sphere_intersect(ray r, sphere s, T expectation) {
+bool ray_sphere_intersect(ray_t r, sphere_t s, T expectation) {
   return expectation(near_intersect(r, s));
 }
 
@@ -36,20 +36,20 @@ private:
 // tests
 RTEST(ray_through_sphere,
   ray_sphere_intersect(
-    ray::from_point_vector(vec3f(-3,0,1), normalized(vec3f(2,1,0))),
-    sphere::from_center_radius_squared(vec3f(1,1,1), 4),
+    ray_t::from_point_vector(vec3f(-3,0,1), normalized(vec3f(2,1,0))),
+    sphere_t::from_center_radius_squared(vec3f(1,1,1), 4),
     fuzzy_eq_vec3f(vec3f(-1,1,1), 0.25)));
 
 RTEST(ray_miss_sphere,
   ray_sphere_intersect(
-    ray::from_point_vector(vec3f(-3,1,1), normalized(vec3f(2,3,1))),
-    sphere::from_center_radius_squared(vec3f(1,1,1), 4),
+    ray_t::from_point_vector(vec3f(-3,1,1), normalized(vec3f(2,3,1))),
+    sphere_t::from_center_radius_squared(vec3f(1,1,1), 4),
     is_null));
 
 RTEST(ray_sphere_behind,
   ray_sphere_intersect(
-    ray::from_point_vector(vec3f(0,0,0), normalized(vec3f(0,0,1))),
-    sphere::from_center_radius_squared(vec3f(0,0,-4), 4),
+    ray_t::from_point_vector(vec3f(0,0,0), normalized(vec3f(0,0,1))),
+    sphere_t::from_center_radius_squared(vec3f(0,0,-4), 4),
     is_null));
 
 } // namespace
