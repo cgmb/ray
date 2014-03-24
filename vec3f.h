@@ -109,6 +109,14 @@ inline float dot(const vec3f& x, const vec3f& y) {
   return x[0]*y[0] + x[1]*y[1] + x[2]*y[2];
 }
 
+inline vec3f cross(const vec3f& x, const vec3f& y) {
+  vec3f result;
+  result[0] = x[1]*y[2] - x[2]*y[1];
+  result[1] = x[2]*y[0] - x[0]*y[2];
+  result[2] = x[0]*y[1] - x[1]*y[0];
+  return result;
+}
+
 inline vec3f nextafter(const vec3f& x, const vec3f& y) {
   return vec3f(std::nextafter(x[0], y[0]),
     std::nextafter(x[1], y[1]),

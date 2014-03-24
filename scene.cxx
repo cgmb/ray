@@ -1,6 +1,8 @@
 #include <yaml-cpp/yaml.h>
 #include "scene.h"
 
+namespace {
+
 vec3f parse_vec3f_node(const YAML::Node& node) {
   vec3f value;
   if (node.size() == 3u) {
@@ -99,6 +101,40 @@ light_t parse_point_light_node(const YAML::Node& node) {
   return value;
 }
 
+mesh_t parse_mesh_node(const YAML::Node& node) {
+  std::vector<vec3f> v;
+  std::vector<unsigned short> i;
+
+  if (node["vertexes"] || node["indexes"]) {
+    if (YAML::Node vertexes = node["vertexes"]) {
+      for (auto it = vertexes.begin(); it != vertexes.end(); ++it) {
+        v.push_back(parse_vec3f_node(*it));
+      }
+    } else {
+      throw std::runtime_error("Inline mesh requires vertexes!");
+    }
+
+    if (YAML::Node indexes = node["indexes"]) {
+      for (auto it = indexes.begin(); it != indexes.end(); ++it) {
+        i.push_back(it->as<unsigned short>());
+      }
+    } else { 
+      unsigned short auto_index = 0u;
+      for (auto it = v.begin(); it != v.end(); ++it) {
+        i.push_back(auto_index++);
+      }
+    }
+  } else if (YAML::Node file = node["file"]) {
+    throw std::runtime_error("External mesh files not supported (yet)!");
+  } else {
+    throw std::runtime_error("Mesh requires vertexes!");
+  }
+
+  return mesh_t(v,i);
+}
+
+} // namespace
+
 scene_t load_scene_from_file(const char* scene_file) {
   scene_t s;
   YAML::Node config = YAML::LoadFile(scene_file);
@@ -141,6 +177,13 @@ scene_t load_scene_from_file(const char* scene_file) {
       for (auto it = spheres.begin(); it != spheres.end(); ++it) {
         s.geometry.spheres.push_back(parse_sphere_node(*it));
         s.sphere_materials.push_back(retrieve_optional_material(*it));
+      }
+    }
+
+    if (YAML::Node meshes = geometry["meshes"]) {
+      for (auto it = meshes.begin(); it != meshes.end(); ++it) {
+        s.geometry.meshes.push_back(parse_mesh_node(*it));
+        s.mesh_materials.push_back(retrieve_optional_material(*it));
       }
     }
   } else {

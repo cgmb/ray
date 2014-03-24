@@ -63,6 +63,33 @@ const char* get_with_default(const char* primary, const char* fallback) {
   return primary ? primary : fallback;
 }
 
+enum nearest_t {
+  NOTHING_NEAREST,
+  SPHERE_NEAREST,
+  MESH_NEAREST,
+};
+
+nearest_t nearest_intersect(
+  const ray_sphere_intersect& rsi,
+  const std::vector<sphere_t>& spheres,
+  const ray_mesh_intersect& rmi,
+  const std::vector<mesh_t>& meshes)
+{
+  if (rsi.intersect_exists(spheres)) {
+    if (rmi.intersect_exists(meshes)) {
+      return rsi.t < rmi.t ? SPHERE_NEAREST : MESH_NEAREST;
+    } else {
+      return SPHERE_NEAREST;
+    }
+  } else {
+    if (rmi.intersect_exists(meshes)) {
+      return MESH_NEAREST;
+    } else {
+      return NOTHING_NEAREST;
+    }
+  }
+}
+
 enum cast_policy_t {
   CAST_TO_OBJECT,
   CAST_TO_LIGHT,
@@ -94,8 +121,13 @@ vec3f cast_ray(const ray_t& ray,
 {
   vec3f color = default_color;
 
-  ray_sphere_intersect rsi = cast_ray(ray, s.geometry.spheres);
-  if (rsi.intersect_exists(s.geometry.spheres)) {
+  ray_sphere_intersect rsi = get_ray_sphere_intersect(ray, s.geometry.spheres);
+  ray_mesh_intersect rmi = get_ray_mesh_intersect(ray, s.geometry.meshes);
+
+  nearest_t nearest =
+    nearest_intersect(rsi, s.geometry.spheres, rmi, s.geometry.meshes);
+
+  if (nearest == SPHERE_NEAREST) {
     material_t material = s.sphere_materials[rsi.index_in(s.geometry.spheres)];
     float solid_component = material.opacity - material.reflectivity;
     if (cast_policy == CAST_TO_OBJECT) {
@@ -126,12 +158,12 @@ vec3f cast_ray(const ray_t& ray,
 
       float translucence = 1.f - material.opacity;
       if (translucence > 0.f) {
-        vec3f pos = ray.position_at(1.01f * rsi.t);
-        vec3f normal = rsi.near_geometry_it->normal_at(pos);
-        if (dot(ray.direction,normal) > 0.f) {
+        vec3f inside_pos = ray.position_at(1.01f * rsi.t);
+        vec3f normal = rsi.near_geometry_it->normal_at(inside_pos);
+        if (dot(ray.direction, normal) > 0.f) {
           normal = -normal;
         }
-        ray_t refracted_ray = { pos, refracted(ray.direction, normal,
+        ray_t refracted_ray = { inside_pos, refracted(ray.direction, normal,
           refractive_index, material.refractive_index) };
         if (recursion_depth < MAX_RECURSE) {
           color += translucence * material.color * cast_ray(refracted_ray, s,
@@ -149,6 +181,60 @@ vec3f cast_ray(const ray_t& ray,
       // but it still has ambient light...
       color = s.ambient_light * solid_component * material.color;
     }
+  } else if (nearest == MESH_NEAREST) {
+
+    material_t material = s.mesh_materials[rmi.index_in(s.geometry.meshes)];
+    float solid_component = material.opacity - material.reflectivity;
+    if (cast_policy == CAST_TO_OBJECT) {
+      // todo: add a minimum threshold to collisions t parameters
+      // since stopping the ray before the sphere may result in distortions
+      vec3f pos = ray.position_at(0.9999f * rmi.t);
+
+      if (solid_component > 0.f) {
+        vec3f light_color(0,0,0);
+        for (const light_t& light : s.lights) {
+          ray_t light_ray = { pos, normalized(light.position - pos) };
+          light_color += cast_ray(light_ray, s, light.color,
+            CAST_TO_LIGHT, refractive_index, recursion_depth + 1u);
+        }
+        color += solid_component * material.color * light_color;
+        color += solid_component * material.color * s.ambient_light;
+      }
+
+      if (material.reflectivity > 0.f) {
+        vec3f normal = rmi.face_normal();
+        ray_t reflected_ray = { pos, reflected(ray.direction, normal) };
+        if (recursion_depth < MAX_RECURSE) {
+          color += material.reflectivity * material.color *
+            cast_ray(reflected_ray, s, default_color, cast_policy,
+            refractive_index, recursion_depth + 1u);
+        }
+      }
+
+      float translucence = 1.f - material.opacity;
+      if (translucence > 0.f) {
+        vec3f inside_pos = ray.position_at(1.01f * rmi.t);
+        vec3f normal = rmi.face_normal();
+        if (dot(ray.direction, normal) > 0.f) {
+          normal = -normal;
+        }
+        ray_t refracted_ray = { inside_pos, refracted(ray.direction, normal,
+          refractive_index, material.refractive_index) };
+        if (recursion_depth < MAX_RECURSE) {
+          color += translucence * material.color * cast_ray(refracted_ray, s,
+            default_color, cast_policy, material.refractive_index,
+            recursion_depth + 1u);
+        } else {
+          // todo: handle total internal reflection more nicely
+          std::cout << "Max recurse depth!" << std::endl;
+        }
+      }
+
+    } else { // cast_policy == CAST_TO_LIGHT
+      // shadowed...
+      color = s.ambient_light * solid_component * material.color;
+    }
+
   }
   return color;
 }

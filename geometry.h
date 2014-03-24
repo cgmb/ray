@@ -40,6 +40,60 @@ struct sphere_t {
   float radius_squared;
 };
 
+inline vec3f triangle_normal(
+  const vec3f& a, const vec3f& b, const vec3f& c)
+{
+  vec3f ab = b - a;
+  vec3f ac = c - a;
+  return normalized(cross(ab, ac));
+}
+
+struct mesh_t {
+  mesh_t()
+  {
+  }
+
+  mesh_t(
+    const std::vector<vec3f>& vertexes,
+    const std::vector<unsigned short>& indexes)
+    : vertexes(vertexes)
+    , indexes(indexes)
+    , vertex_normals(vertexes.size())
+    , face_normals(indexes.size() / 3u)
+  {
+    assert(vertexes.size() <= std::numeric_limits<unsigned short>::max());
+    calculate_normals();
+  }
+
+  void calculate_normals() {
+    // calculate face normals and collect data for vertex normals
+    // also calculate face centers
+    for (size_t i = 0u; i < face_normals.size(); ++i) {
+      unsigned short i1 = indexes[3*i];
+      unsigned short i2 = indexes[3*i + 1];
+      unsigned short i3 = indexes[3*i + 2];
+
+      vec3f normal = triangle_normal(
+        vertexes[i1], vertexes[i2], vertexes[i3]);
+      face_normals[i] = normal;
+
+      // associate this face normal with each vertex
+      vertex_normals[i1] += normal;
+      vertex_normals[i2] += normal;
+      vertex_normals[i3] += normal;
+    }
+
+    std::transform(vertex_normals.begin(), vertex_normals.end(),
+      vertex_normals.begin(), normalized);
+  }
+
+  std::vector<vec3f> vertexes;
+  std::vector<unsigned short> indexes;
+
+  std::vector<vec3f> vertex_normals;
+  std::vector<vec3f> face_normals;
+};
+
 // todo: move to more appropriate header
 inline bool abs_fuzzy_eq(double lhs, double rhs, double abs_epsilon) {
   return std::abs(lhs - rhs) < abs_epsilon;
@@ -94,7 +148,7 @@ struct ray_sphere_intersect {
   }
 };
 
-inline ray_sphere_intersect cast_ray(
+inline ray_sphere_intersect get_ray_sphere_intersect(
   const ray_t& eye_ray,
   const std::vector<sphere_t>& geometry)
 {
@@ -119,16 +173,120 @@ inline ray_sphere_intersect cast_ray(
   return rsi;
 }
 
-struct geometry_t {
-  std::vector<sphere_t> spheres;
+struct ray_triangle_intersect {
+  float t;
+  size_t near_face_index;
 };
 
-inline ray_sphere_intersect cast_ray(
-  const ray_t& eye_ray,
-  const geometry_t& geometry)
+/* Intersects are ordered by their t value
+   Note that lists containing non-existant intersects are only
+   partially ordered. Non-existant intersects have no order.
+*/
+inline bool operator<(const ray_triangle_intersect& lhs,
+  const ray_triangle_intersect& rhs)
 {
-  return cast_ray(eye_ray, geometry.spheres);
+  return lhs.t < rhs.t;
 }
+
+/* Intersect does not exist if t is not a number
+*/
+inline bool intersect_exists(const ray_triangle_intersect& value) {
+  return !std::isnan(value.t);
+}
+
+/* Returns the nearest intersect point
+   along the parametric equation of the ray (pos = origin + direction * t)
+*/
+inline ray_triangle_intersect get_ray_triangle_intersect(
+  const ray_t& r, const mesh_t& m)
+{
+  assert(abs_fuzzy_eq(magnitude(r.direction), 1, 1e-3));
+
+  // todo: add bounding sphere intersect test
+  std::vector<ray_triangle_intersect> intersects;
+  for (size_t i = 0u; i < m.face_normals.size(); ++i) {
+    vec3f v1 = m.vertexes[m.indexes[3*i]];
+    vec3f v2 = m.vertexes[m.indexes[3*i + 1]];
+    vec3f v3 = m.vertexes[m.indexes[3*i + 2]];
+
+    vec3f normal = m.face_normals[i];
+    float d = dot(r.direction, normal);
+    if (d == 0.f) {
+      continue;
+    }
+    float plane_intersect = -dot(r.start - v1, normal) / d;
+    if (plane_intersect < 0.f) {
+      continue;
+    }
+
+    vec3f point = r.position_at(plane_intersect);
+    bool side_a = dot(normal, cross(v2-v1, point-v1)) < 0.f;
+    bool side_b = dot(normal, cross(v3-v2, point-v2)) < 0.f;
+    bool side_c = dot(normal, cross(v1-v3, point-v3)) < 0.f;
+
+    if (side_a == side_b && side_b == side_c) {
+      intersects.push_back(ray_triangle_intersect{ plane_intersect, i });
+    }
+  }
+
+  auto near_it = std::min_element(intersects.begin(), intersects.end());
+  if (near_it == intersects.end()) {
+    return ray_triangle_intersect{ quiet_nan(), 0u };
+  } else {
+    return *near_it;
+  }
+}
+
+struct ray_mesh_intersect {
+  float t;
+  size_t near_face_index;
+  std::vector<mesh_t>::const_iterator near_geometry_it;
+
+  bool intersect_exists(const std::vector<mesh_t>& m) const {
+    return !std::isnan(t) && m.end() != near_geometry_it;
+  }
+
+  size_t index_in(const std::vector<mesh_t>& m) const {
+    return std::distance(m.begin(), near_geometry_it);
+  }
+
+  vec3f face_normal() const {
+    return near_geometry_it->face_normals[near_face_index];
+  }
+};
+
+inline ray_mesh_intersect get_ray_mesh_intersect(
+  const ray_t& eye_ray,
+  const std::vector<mesh_t>& geometry)
+{
+  ray_mesh_intersect rmi = { quiet_nan(), 0u, geometry.end() };
+  if (geometry.empty()) {
+    return rmi;
+  }
+
+  auto intersects_eye_ray_at = std::bind(get_ray_triangle_intersect, eye_ray, _1);
+
+  std::vector<ray_triangle_intersect> intersections(geometry.size());
+  std::transform(geometry.begin(), geometry.end(), 
+    intersections.begin(), intersects_eye_ray_at);
+  // if the first element is nan no element will compare as less than it
+  auto begin_near_it = std::find_if(
+    intersections.cbegin(), intersections.cend(), intersect_exists);
+  auto near_it = std::min_element(begin_near_it, intersections.cend());
+
+  auto near_geometry_it = geometry.begin() +
+    std::distance(intersections.cbegin(), near_it);
+
+  rmi.t = near_it->t;
+  rmi.near_face_index = near_it->near_face_index;
+  rmi.near_geometry_it = near_geometry_it;
+  return rmi;
+}
+
+struct geometry_t {
+  std::vector<sphere_t> spheres;
+  std::vector<mesh_t> meshes;
+};
 
 inline vec3f reflected(const vec3f& incident, const vec3f& normal) {
   return incident -2.f * dot(incident, normal) * normal;
