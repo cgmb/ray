@@ -131,7 +131,20 @@ inline ray_sphere_intersect cast_ray(
 }
 
 inline vec3f reflected(const vec3f& incident, const vec3f& normal) {
-  return -2 * dot(incident, normal) * normal + incident;
+  return incident -2.f * dot(incident, normal) * normal;
+}
+
+inline vec3f refracted(const vec3f& incident, const vec3f& normal,
+  float n1, float n2)
+{
+  float dot_in = dot(incident, normal);
+  float dot_in_sq = dot_in * dot_in;
+
+  float n1_n2 = n1 / n2;
+  float n1_n2_sq = n1_n2 * n1_n2;
+
+  return n1_n2 * (incident - dot_in * normal) -
+    normal * sqrt(1.f - n1_n2_sq * (1.f - dot_in_sq));
 }
 
 #endif

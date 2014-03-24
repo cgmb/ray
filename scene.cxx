@@ -68,8 +68,17 @@ material_t retrieve_optional_material(const YAML::Node& node) {
     value.reflectivity = 0.f;
   }
 
-  value.refractive_index = 1.f;
-  value.opacity = 1.f;
+  if (YAML::Node refractive_index = node["refractive_index"]) {
+    value.refractive_index = refractive_index.as<float>();
+  } else {
+    value.refractive_index = 1.f;
+  }
+
+  if (YAML::Node opacity = node["opacity"]) {
+    value.opacity = opacity.as<float>();
+  } else {
+    value.opacity = 1.f;
+  }
 
   return value;
 }
@@ -139,6 +148,11 @@ scene_t load_scene_from_file(const char* scene_file) {
   }
 
   if (YAML::Node lights = config["lights"]) {
+    if (YAML::Node ambient = lights["ambient"]) {
+      s.ambient_light = parse_vec3f_node(ambient);
+    } else {
+      s.ambient_light = vec3f(0,0,0);
+    }
     if (YAML::Node points = lights["points"]) {
       for (auto it = points.begin(); it != points.end(); ++it) {
         s.lights.push_back(parse_point_light_node(*it));

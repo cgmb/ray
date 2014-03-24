@@ -33,6 +33,7 @@ struct scene_t {
   geometry_t geometry;
   std::vector<material_t> sphere_materials;
   std::vector<light_t> lights;
+  vec3f ambient_light;
 
   vec3f screen_offset_per_px_x() const;
   vec3f screen_offset_per_px_y() const;

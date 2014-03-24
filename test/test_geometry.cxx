@@ -57,9 +57,28 @@ RTEST(reflect_straight_on_z, []{
   return magnitude(reflect - vec3f(0,0,1)) < 1e-4f;
 });
 
+RTEST(refract_straight_on_z, []{
+  vec3f value = refracted(vec3f(0,0,-1), vec3f(0,0,1), 1.f, 1.f);
+  return magnitude(value - vec3f(0,0,-1)) < 1e-4f;
+});
+
+RTEST(refract_angle_equal_n, []{
+  vec3f incident = normalized(vec3f(0,1,-1));
+  vec3f value = refracted(incident, vec3f(0,0,1), 1.f, 1.f);
+  return magnitude(value - incident) < 1e-4f;
+});
+
+RTEST(refract_angle_different_n, []{
+  vec3f incident = normalized(vec3f(0,1,-1));
+  vec3f normal = vec3f(0,0,1);
+  vec3f value = refracted(incident, normal, 1.f, 1.25f);
+  return dot(-normal,value) < dot(-normal,incident);
+});
+
 } // namespace
 #include "vector_debug.h"
 test_results test_geometry() {
   return ray_through_sphere() % ray_miss_sphere() % ray_sphere_behind() %
-    reflect_straight_on_z();
+    reflect_straight_on_z() % refract_straight_on_z() %
+    refract_angle_equal_n() % refract_angle_different_n();
 }
