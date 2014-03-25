@@ -3,6 +3,7 @@ export CFLAGS
 override CFLAGS += -std=c++0x -pthread -Werror -Wall -Wextra\
 	-Wno-unused-parameter
 release: CFLAGS += -O2
+optimize: CFLAGS += -O3 -march=native
 debug: CFLAGS += -g
 test: CFLAGS += -iquote=$(CURDIR)
 LIBS=-lpng -lm
@@ -20,11 +21,13 @@ THIRDPARTY=3rdparty
 LIBPATH=-L$(THIRDPARTY)/lib
 INCPATH=-I$(THIRDPARTY)/include
 
-.PHONY: all release debug clean run test
+.PHONY: all release debug optimize clean run test
 
 all: release
 
 release: $(EXENAME)
+
+optimize: $(EXENAME)
 
 debug: $(EXENAME)
 

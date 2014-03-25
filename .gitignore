@@ -1,6 +1,6 @@
 /ray
 /run_tests
-/output.png
+/*.png
 /3rdparty/include
 /3rdparty/lib
 *.o
