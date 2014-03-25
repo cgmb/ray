@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include <thread>
 #include <vector>
 #include "geometry.h"
 #include "image.h"
@@ -11,24 +13,28 @@ enum {
   EXIT_OK = 0,
   EXIT_FAIL_SAVE,
   EXIT_FAIL_LOAD,
+  EXIT_BAD_ARGS,
 };
 
 enum {
   INVALID_ARG = -1,
   SCENE_FILE_ARG,
   OUTPUT_FILE_ARG,
+  THREAD_COUNT_ARG,
 };
 
 struct user_inputs {
   user_inputs()
     : scene_file(0)
     , output_file(0)
+    , thread_count(1)
     , requests_help(false)
   {
   }
 
   const char* scene_file;
   const char* output_file;
+  unsigned thread_count;
   bool requests_help;
 };
 
@@ -42,14 +48,25 @@ user_inputs parse_inputs(int argc, char** argv) {
     } else if (next_expected_arg == OUTPUT_FILE_ARG) {
       in.output_file = argv[i];
       next_expected_arg = INVALID_ARG;
+    } else if (next_expected_arg == THREAD_COUNT_ARG) {
+      std::istringstream input(argv[i]);
+      input >> in.thread_count;
+      if (!input) {
+        std::cerr << "Invalid thread count: " << argv[i] << std::endl;
+        std::exit(EXIT_BAD_ARGS);
+      }
+      next_expected_arg = INVALID_ARG;
     } else if (!strcmp(argv[i], "--scene")) {
       next_expected_arg = SCENE_FILE_ARG;
     } else if (!strcmp(argv[i], "--output")) {
       next_expected_arg = OUTPUT_FILE_ARG;
+    } else if (!strcmp(argv[i], "--threads") || !strcmp(argv[i], "-j")) {
+      next_expected_arg = THREAD_COUNT_ARG;
     } else if (!strcmp(argv[i], "--help")) {
       in.requests_help = true;
     } else {
-      std::cerr << "Unknown input: " << argv[i] << std::endl;
+      std::cerr << "Unrecognized input: " << argv[i] << std::endl;
+      std::exit(EXIT_BAD_ARGS);
     }
   }
   return in;
@@ -183,6 +200,8 @@ vec3f cast_ray(const ray_t& ray,
     }
   } else if (nearest == MESH_NEAREST) {
 
+    // todo: reduce duplication between sphere and mesh color calculations
+
     material_t material = s.mesh_materials[rmi.index_in(s.geometry.meshes)];
     float solid_component = material.opacity - material.reflectivity;
     if (cast_policy == CAST_TO_OBJECT) {
@@ -239,7 +258,8 @@ vec3f cast_ray(const ray_t& ray,
   return color;
 }
 
-image generate_image(const scene_t& s) {
+image generate_image(const scene_t& s, unsigned thread_count)
+{
   const vec3f observer = s.observer;
   const resolution_t res = s.res;
   const vec3f screen_top_left = s.screen_top_left;
@@ -247,17 +267,26 @@ image generate_image(const scene_t& s) {
   const vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
 
   image img(res.x, res.y);
+  std::vector<std::thread> threads(thread_count);
 
-  for (unsigned y = 0u; y < res.y; ++y) {
-    for (unsigned x = 0u; x < res.x; ++x) {
-      vec3f background_color = { 0, 0, 0 };
-      vec3f pixel_pos = screen_top_left +
-        x * screen_offset_per_px_x +
-        y * screen_offset_per_px_y;
-      ray_t eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
-      img.px(x, y) = cast_ray(eye_ray, s, background_color,
-        CAST_TO_OBJECT, 1.f, 0u);
-    }
+  for (unsigned thread_id = 0u; thread_id < threads.size(); ++thread_id) {
+    threads[thread_id] = std::thread([&,thread_id]() {
+      for (unsigned y = 0u; y < res.y; ++y) {
+        for (unsigned x = thread_id; x < res.x; x += thread_count) {
+          vec3f background_color = { 0, 0, 0 };
+          vec3f pixel_pos = screen_top_left +
+            x * screen_offset_per_px_x +
+            y * screen_offset_per_px_y;
+          ray_t eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
+          img.px(x, y) = cast_ray(eye_ray, s, background_color,
+            CAST_TO_OBJECT, 1.f, 0u);
+        }
+      }
+    });
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   return img;
@@ -273,7 +302,7 @@ int main(int argc, char** argv) {
   const scene_t scene = try_load_scene_from_file(
     get_with_default(user.scene_file, "world.yml"), EXIT_FAIL_LOAD);
 
-  image img = generate_image(scene);
+  image img = generate_image(scene, user.thread_count);
   img.clamp_colors();
   if (!img.save_as_png(get_with_default(user.output_file, "output.png"))) {
     return EXIT_FAIL_SAVE;

@@ -1,10 +1,12 @@
 export CC=g++
 export CFLAGS
-override CFLAGS += -std=c++0x -Werror -Wall -Wextra -Wno-unused-parameter
+override CFLAGS += -std=c++0x -pthread -Werror -Wall -Wextra\
+	-Wno-unused-parameter
 release: CFLAGS += -O2
 debug: CFLAGS += -g
 test: CFLAGS += -iquote=$(CURDIR)
-LIBS=-lpng -lGLEW -lGL -lGLU -lglut -lm
+LIBS=-lpng -lm
+LINKFLAGS=-Wl,--no-as-needed
 EXENAME=ray
 # test directory
 TDIR=test
@@ -31,7 +33,7 @@ $(BDIR):
 
 $(EXENAME): $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o
 	$(CC) $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o -o $(EXENAME)\
-		 $(CFLAGS) $(LIBPATH) -lyaml-cpp $(LIBS)
+		 $(CFLAGS) $(LIBPATH) -lyaml-cpp $(LIBS) $(LINKFLAGS)
 
 $(BDIR)/main.o: main.cxx *.h | $(BDIR)
 	$(CC) $< -c -o $@ $(CFLAGS)
@@ -62,7 +64,8 @@ $(BTDIR)/test_main.o: $(TDIR)/test_main.cxx | $(BTDIR)
 $(TEXENAME): $(BTDIR)/test_main.o $(BTDIR)/test_image.o\
 	$(BTDIR)/test_geometry.o
 	$(CC) $(BTDIR)/test_main.o $(BTDIR)/test_image.o\
-		$(BTDIR)/test_geometry.o -o $(TEXENAME) $(CFLAGS) $(LIBS)
+		$(BTDIR)/test_geometry.o -o $(TEXENAME) $(CFLAGS)\
+		$(LIBS) $(LINKFLAGS)
 
 test: $(TEXENAME)
 	./$(TEXENAME)
