@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <thread>
 #include <vector>
@@ -6,6 +7,7 @@
 #include "help_text.h"
 #include "image.h"
 #include "scene.h"
+#include "vec2f.h"
 #include "vec3f.h"
 
 enum {
@@ -267,6 +269,7 @@ image generate_image(const scene_t& s, unsigned thread_count)
 {
   const vec3f observer = s.observer;
   const resolution_t res = s.res;
+  const unsigned sample_count = s.sample_count;
   const vec3f screen_top_left = s.screen_top_left;
   const vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
   const vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
@@ -276,15 +279,22 @@ image generate_image(const scene_t& s, unsigned thread_count)
 
   for (unsigned thread_id = 0u; thread_id < threads.size(); ++thread_id) {
     threads[thread_id] = std::thread([&,thread_id]() {
-      for (unsigned y = 0u; y < res.y; ++y) {
-        for (unsigned x = thread_id; x < res.x; x += thread_count) {
-          vec3f background_color = { 0, 0, 0 };
-          vec3f pixel_pos = screen_top_left +
-            x * screen_offset_per_px_x +
-            y * screen_offset_per_px_y;
-          ray_t eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
-          img.px(x, y) = cast_ray(eye_ray, s, background_color,
-            CAST_TO_OBJECT, 1.f, 0u);
+      for (unsigned y = thread_id; y < res.y; y += thread_count) {
+        std::mt19937 engine(y);
+        std::uniform_real_distribution<float> distribution(0.f, 1.f);
+        auto rng = std::bind(distribution, engine);
+        for (unsigned x = 0u; x < res.x; ++x) {
+          vec3f px_color = { 0, 0, 0 };
+          for (unsigned sample = 0u; sample < sample_count; ++sample) {
+            vec3f background_color = { 0, 0, 0 };
+            vec3f pixel_pos = screen_top_left +
+              (x + rng()) * screen_offset_per_px_x +
+              (y + rng()) * screen_offset_per_px_y;
+            ray_t eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
+            px_color += cast_ray(eye_ray, s, background_color,
+              CAST_TO_OBJECT, 1.f, 0u);
+          }
+          img.px(x, y) = px_color / sample_count;
         }
       }
     });

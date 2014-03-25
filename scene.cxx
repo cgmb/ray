@@ -172,6 +172,12 @@ scene_t load_scene_from_file(const char* scene_file) {
     throw std::runtime_error("Scene requires resolution!");
   }
 
+  if (YAML::Node samples = config["samples"]) {
+    s.sample_count = samples.as<unsigned>();
+  } else {
+    s.sample_count = 1u;
+  }
+
   if (YAML::Node geometry = config["geometry"]) {
     if (YAML::Node spheres = geometry["spheres"]) {
       for (auto it = spheres.begin(); it != spheres.end(); ++it) {
@@ -225,6 +231,7 @@ scene_t generate_default_scene() {
   s.screen_top_right = vec3f{ 5, 5, 0 };
   s.screen_bottom_right = vec3f{ 5, -5, 0 };
   s.res = resolution_t{ 100, 100 };
+  s.sample_count = 1;
   s.geometry.spheres.push_back(sphere_t{ vec3f(0, 0, 10), 3 });
   s.lights.push_back(light_t{ vec3f(0, 0, -10), vec3f(1, 1, 1) });
   return s;

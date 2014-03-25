@@ -24,6 +24,7 @@ struct material_t {
 
 struct scene_t {
   resolution_t res;
+  unsigned sample_count;
 
   vec3f observer;
   vec3f screen_top_left;
@@ -43,12 +44,12 @@ struct scene_t {
 
 inline vec3f scene_t::screen_offset_per_px_x() const {
   vec3f screen_offset_x = screen_top_right - screen_top_left;
-  return (1.f / res.x) * screen_offset_x;
+  return screen_offset_x / (res.x + 1u);
 }
 
 inline vec3f scene_t::screen_offset_per_px_y() const {
   vec3f screen_offset_y = screen_bottom_right - screen_top_right;
-  return (1.f / res.y) * screen_offset_y;
+  return screen_offset_y / (res.y + 1u);
 }
 
 
