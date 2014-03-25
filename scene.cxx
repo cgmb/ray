@@ -202,7 +202,7 @@ scene_t load_scene_from_file(const char* scene_file) {
       }
     }
   } else {
-    throw std::runtime_error("Scene requires geometry!");
+    throw std::runtime_error("Scene requires lights!");
   }
 
   return s;

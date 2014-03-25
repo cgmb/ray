@@ -3,11 +3,10 @@
 #include <thread>
 #include <vector>
 #include "geometry.h"
+#include "help_text.h"
 #include "image.h"
 #include "scene.h"
 #include "vec3f.h"
-
-#include "vector_debug.h"
 
 enum {
   EXIT_OK = 0,
@@ -18,6 +17,7 @@ enum {
 
 enum {
   INVALID_ARG = -1,
+  HELP_ARG,
   SCENE_FILE_ARG,
   OUTPUT_FILE_ARG,
   THREAD_COUNT_ARG,
@@ -29,6 +29,7 @@ struct user_inputs {
     , output_file(0)
     , thread_count(1)
     , requests_help(false)
+    , requests_help_scene(false)
   {
   }
 
@@ -36,6 +37,7 @@ struct user_inputs {
   const char* output_file;
   unsigned thread_count;
   bool requests_help;
+  bool requests_help_scene;
 };
 
 user_inputs parse_inputs(int argc, char** argv) {
@@ -64,16 +66,19 @@ user_inputs parse_inputs(int argc, char** argv) {
       next_expected_arg = THREAD_COUNT_ARG;
     } else if (!strcmp(argv[i], "--help")) {
       in.requests_help = true;
+      next_expected_arg = HELP_ARG;
+    } else if (next_expected_arg == HELP_ARG) {
+      if (!strcmp(argv[i], "scene")) {
+        in.requests_help_scene = true;
+        in.requests_help = false;
+      }
+      next_expected_arg = INVALID_ARG;
     } else {
       std::cerr << "Unrecognized input: " << argv[i] << std::endl;
       std::exit(EXIT_BAD_ARGS);
     }
   }
   return in;
-}
-
-void print_help() {
-  // todo
 }
 
 const char* get_with_default(const char* primary, const char* fallback) {
@@ -295,7 +300,10 @@ image generate_image(const scene_t& s, unsigned thread_count)
 int main(int argc, char** argv) {
   user_inputs user = parse_inputs(argc, argv);
   if (user.requests_help) {
-    print_help();
+    std::cout << help_text << std::endl;
+    std::exit(EXIT_OK);
+  } else if (user.requests_help_scene) {
+    std::cout << scene_file_help_text << std::endl;
     std::exit(EXIT_OK);
   }
 
