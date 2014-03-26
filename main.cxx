@@ -119,7 +119,15 @@ enum cast_policy_t {
   CAST_TO_LIGHT,
 };
 
+// The maximum recursive depth
 const unsigned MAX_RECURSE = 10u;
+
+// The distance along the ray that the collision is offset by,
+// to ensure floating point inaccuracy doesn't result in recollision
+// with the same surface upon recasting from the collision point.
+// Overall, it's a bit of a hack. A backoff algorithm would be more
+// appropriate.
+const float BACKOFF = 1e-3f;
 
 /* Casts a ray into the scene and returns a color.
 
@@ -155,9 +163,7 @@ vec3f cast_ray(const ray_t& ray,
     material_t material = s.sphere_materials[rsi.index_in(s.geometry.spheres)];
     float solid_component = material.opacity - material.reflectivity;
     if (cast_policy == CAST_TO_OBJECT) {
-      // todo: add a minimum threshold to collisions t parameters
-      // since stopping the ray before the sphere may result in distortions
-      vec3f pos = ray.position_at(0.9999f * rsi.t);
+      vec3f pos = ray.position_at(rsi.t - BACKOFF);
 
       if (solid_component > 0.f) {
         vec3f light_color(0,0,0);
@@ -182,7 +188,7 @@ vec3f cast_ray(const ray_t& ray,
 
       float translucence = 1.f - material.opacity;
       if (translucence > 0.f) {
-        vec3f inside_pos = ray.position_at(1.01f * rsi.t);
+        vec3f inside_pos = ray.position_at(rsi.t + BACKOFF);
         vec3f normal = rsi.near_geometry_it->normal_at(inside_pos);
         if (dot(ray.direction, normal) > 0.f) {
           normal = -normal;
@@ -212,9 +218,7 @@ vec3f cast_ray(const ray_t& ray,
     material_t material = s.mesh_materials[rmi.index_in(s.geometry.meshes)];
     float solid_component = material.opacity - material.reflectivity;
     if (cast_policy == CAST_TO_OBJECT) {
-      // todo: add a minimum threshold to collisions t parameters
-      // since stopping the ray before the sphere may result in distortions
-      vec3f pos = ray.position_at(0.9999f * rmi.t);
+      vec3f pos = ray.position_at(rmi.t - BACKOFF);
 
       if (solid_component > 0.f) {
         vec3f light_color(0,0,0);
@@ -239,7 +243,7 @@ vec3f cast_ray(const ray_t& ray,
 
       float translucence = 1.f - material.opacity;
       if (translucence > 0.f) {
-        vec3f inside_pos = ray.position_at(1.01f * rmi.t);
+        vec3f inside_pos = ray.position_at(rsi.t + BACKOFF);
         vec3f normal = rmi.face_normal();
         if (dot(ray.direction, normal) > 0.f) {
           normal = -normal;
