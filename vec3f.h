@@ -1,8 +1,6 @@
 #ifndef VEC3F_H
 #define VEC3F_H
 
-// Switching to std::array makes it behave more like a normal type.
-
 #include <array>
 #include "vector_math.h"
 
@@ -19,6 +17,7 @@ struct vec3f : public std::array<float, 3> {
 
   vec3f& operator+=(const vec3f& rhs);
   vec3f& operator-=(const vec3f& rhs);
+  vec3f& operator/=(float rhs);
 };
 
 inline vec3f::vec3f(){
@@ -84,8 +83,17 @@ inline vec3f operator-(const vec3f& rhs) {
   return vec3f(-rhs[0], -rhs[1], -rhs[2]);
 }
 
-inline vec3f operator/(const vec3f& lhs, float rhs) {
-  return vec3f(lhs[0] / rhs, lhs[1] / rhs, lhs[2] / rhs);
+inline vec3f& vec3f::operator/=(float rhs) {
+  vec3f& lhs = *this;
+  lhs[0] /= rhs;
+  lhs[1] /= rhs;
+  lhs[2] /= rhs;
+  return lhs;
+}
+
+inline vec3f operator/(vec3f lhs, float rhs) {
+  lhs /= rhs;
+  return lhs;
 }
 
 inline vec3f operator*(float lhs, const vec3f& rhs) {

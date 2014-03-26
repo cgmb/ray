@@ -2,10 +2,11 @@
 #define GEOMETRY_H
 
 #include <algorithm>
+#include <cassert>
+#include <cfloat>
+#include <cmath>
 #include <functional>
 #include <limits>
-#include <cassert>
-#include <cmath>
 #include <vector>
 #include "vec3f.h"
 
@@ -48,6 +49,25 @@ inline vec3f triangle_normal(
   return normalized(cross(ab, ac));
 }
 
+template<class iterator>
+sphere_t get_bounding_sphere(iterator begin, iterator end) {
+  vec3f min(FLT_MAX, FLT_MAX, FLT_MAX);
+  vec3f max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+  for (; begin != end; ++begin) {
+    const vec3f value = *begin;
+    for (size_t i=0u; i<3u; ++i) {
+      if (value[i] < min[i]) {
+        min[i] = value[i];
+      } else if (value[i] > max[i]) {
+        max[i] = value[i];
+      }
+    }
+  }
+  vec3f center = min/2.f + max/2.f;
+  float radius = std::max({max[0]-min[0], max[1]-min[1], max[2]-min[2]});
+  return sphere_t::from_center_radius_squared(center, radius * radius);
+}
+
 struct mesh_t {
   mesh_t()
   {
@@ -63,6 +83,7 @@ struct mesh_t {
   {
     assert(vertexes.size() <= std::numeric_limits<unsigned short>::max());
     calculate_normals();
+    calculate_bounding_sphere();
   }
 
   void calculate_normals() {
@@ -87,11 +108,15 @@ struct mesh_t {
       vertex_normals.begin(), normalized);
   }
 
+  void calculate_bounding_sphere() {
+    bounding_sphere = get_bounding_sphere(vertexes.cbegin(), vertexes.cend());
+  }
+
   std::vector<vec3f> vertexes;
   std::vector<unsigned short> indexes;
-
   std::vector<vec3f> vertex_normals;
   std::vector<vec3f> face_normals;
+  sphere_t bounding_sphere;
 };
 
 // todo: move to more appropriate header
@@ -237,6 +262,22 @@ inline ray_triangle_intersect get_ray_triangle_intersect(
   }
 }
 
+inline bool could_ray_intersect_mesh(const ray_t& r, const mesh_t& m) {
+  return !std::isnan(near_intersect_param(r, m.bounding_sphere));
+}
+
+/* Do a bounding sphere check first to filter out obvious misses
+*/
+inline ray_triangle_intersect get_possible_ray_triangle_intersect(
+  const ray_t& r, const mesh_t& m)
+{
+  if (could_ray_intersect_mesh(r, m)) {
+    return get_ray_triangle_intersect(r, m);
+  } else {
+    return ray_triangle_intersect{ quiet_nan(), 0u };
+  }
+}
+
 struct ray_mesh_intersect {
   float t;
   size_t near_face_index;
@@ -264,9 +305,9 @@ inline ray_mesh_intersect get_ray_mesh_intersect(
     return rmi;
   }
 
-  auto intersects_eye_ray_at = std::bind(get_ray_triangle_intersect, eye_ray, _1);
-
   std::vector<ray_triangle_intersect> intersections(geometry.size());
+  auto intersects_eye_ray_at =
+    std::bind(get_possible_ray_triangle_intersect, eye_ray, _1);
   std::transform(geometry.begin(), geometry.end(), 
     intersections.begin(), intersects_eye_ray_at);
   // if the first element is nan no element will compare as less than it
