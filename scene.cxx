@@ -155,6 +155,67 @@ light_t parse_point_light_node(const YAML::Node& node) {
   return value;
 }
 
+/* This is not optimal in terms of memory usage but is an easy
+   approximation.
+*/
+std::vector<light_t> parse_sphere_light_node(const YAML::Node& node) {
+  std::vector<light_t> value;
+
+  vec3f center;
+  if (YAML::Node n = node["center"]) {
+    center = parse_vec3f_node(n);
+  } else {
+    throw std::runtime_error("Sphere light requires center!");
+  }
+
+  vec3f color;
+  if (YAML::Node n = node["color"]) {
+    color = parse_vec3f_node(n);
+  } else {
+    throw std::runtime_error("Sphere light requires color!");
+  }
+
+  float radius;
+  if (YAML::Node n = node["radius"]) {
+    radius = n.as<float>();
+  } else {
+    throw std::runtime_error("Sphere light requires radius!");
+  }
+
+  float density;
+  if (YAML::Node n = node["density"]) {
+    density = n.as<float>();
+  } else {
+    density = 1.f;
+  }
+
+  unsigned seed;
+  if (YAML::Node n = node["seed"]) {
+    seed = n.as<float>();
+  } else {
+    seed = 0u;
+  }
+
+  std::mt19937 engine(seed);
+  std::uniform_real_distribution<float> distribution(0.f, 1.f);
+  auto rng = std::bind(distribution, engine);
+
+  float volume = 4.f / 3.f * M_PI * radius * radius * radius;
+  size_t points_required = volume * density;
+  vec3f per_point_color = color / points_required;
+  while (value.size() < points_required) {
+    vec3f candidate(rng(), rng(), rng());
+    if (magnitude(candidate) <= 1.f) {
+      light_t pl;
+      pl.position = 2.f * radius * candidate + center;
+      pl.color = per_point_color;
+      value.push_back(pl);
+    }
+  }
+
+  return value;
+}
+
 mesh_t parse_mesh_node(const YAML::Node& node) {
   std::vector<vec3f> v;
   std::vector<unsigned short> i;
@@ -259,6 +320,12 @@ scene_t load_scene_from_file(const char* scene_file) {
     if (YAML::Node points = lights["points"]) {
       for (auto it = points.begin(); it != points.end(); ++it) {
         s.lights.push_back(parse_point_light_node(*it));
+      }
+    }
+    if (YAML::Node spheres = lights["spheres"]) {
+      for (auto it = spheres.begin(); it != spheres.end(); ++it) {
+        std::vector<light_t> samples = parse_sphere_light_node(*it);
+        s.lights.insert(s.lights.end(), samples.begin(), samples.end());
       }
     }
   } else {

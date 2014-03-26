@@ -36,8 +36,11 @@ geometry:
 lights:
   ambient: [0.125, 0.125, 0.125]
   points:
-    - position: [-10, -10, -5]
-      color:    [0.5, 0.5, 0.5]
+    - color:    [0.5, 0.5, 0.5]
+      position: [15, 15, -5]
 
-    - position: [15, 15, -5]
-      color:    [0.5, 0.5, 0.5]
+  spheres:
+    - color: [0.5, 0.5, 0.5]
+      center: [-10, -10, -5]
+      radius: 1
+      density: 5
