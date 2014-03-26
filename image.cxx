@@ -99,11 +99,11 @@ bool save_png_to_file(const image_24bit& bitmap, const char* path)
   }
 
   // write out
-  png_init_io(ctx.png_ptr, &*file);
+  png_init_io(ctx.png_ptr, file.get());
   png_set_rows(ctx.png_ptr, ctx.info_ptr, row_pointers);
   png_write_png(ctx.png_ptr, ctx.info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
 
-  for (size_t y = 0; y < bitmap.height; y++) {
+  for (size_t y = 0; y < bitmap.height; ++y) {
     png_free(ctx.png_ptr, row_pointers[y]);
   }
   png_free(ctx.png_ptr, row_pointers);
@@ -116,8 +116,7 @@ uint8_t f2p(float f) {
 }
 
 color_24bit vec3f_to_24bit_color(const vec3f& v) {
-  color_24bit p = { f2p(v[0]), f2p(v[1]), f2p(v[2]) };
-  return p;
+  return color_24bit{ f2p(v[0]), f2p(v[1]), f2p(v[2]) };
 }
 
 vec3f clamp_color(vec3f color) {
