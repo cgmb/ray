@@ -1,5 +1,8 @@
+#include <functional>
 #include <yaml-cpp/yaml.h>
 #include "scene.h"
+
+using std::placeholders::_1;
 
 namespace {
 
@@ -58,9 +61,60 @@ vec3f retrieve_optional_color(const YAML::Node& node) {
   return value;
 }
 
+vec3f retrieve_optional_secondary_color(const YAML::Node& node) {
+  vec3f value;
+  if (YAML::Node color = node["secondary_color"]) {
+    value = parse_vec3f_node(color);
+  } else {
+    value = vec3f(0, 0, 0);
+  }
+  return value;
+}
+
+tex3d_lookup_t retrieve_optional_texture(const YAML::Node& node,
+  const vec3f& color, const vec3f& secondary_color)
+  {
+  tex3d_lookup_t value;
+  if (YAML::Node texture = node["texture"]) {
+    std::string name;
+    try {
+      name = texture.as<std::string>();
+    } catch(const YAML::RepresentationException&) {
+      if (YAML::Node texture = node["name"]) {
+      } else {
+        throw std::runtime_error("Texture requires name!");
+      }
+    }
+    if (name == "checkerboard") {
+      value = std::bind(algo_texture::checkerboard_3d, _1,
+        color, secondary_color);;
+    } else if (name == "gridlines") {
+
+      float period = 1.f;
+      if (YAML::Node p = node["period"]) {
+        period = p.as<float>();
+      }
+
+      float width = 0.125f;
+      if (YAML::Node w = node["width"]) {
+        width = w.as<float>();
+      }
+
+      value = std::bind(algo_texture::gridlines_3d, _1, period, width,
+        color, secondary_color);
+    } else {
+      throw std::runtime_error("Unknown texture type!");
+    }
+  }
+  return value;
+}
+
 material_t retrieve_optional_material(const YAML::Node& node) {
   material_t value;
   value.color = retrieve_optional_color(node);
+  value.secondary_color = retrieve_optional_secondary_color(node);
+  value.texture = retrieve_optional_texture(node,
+    value.color, value.secondary_color);
 
   if (YAML::Node reflectivity = node["reflectivity"]) {
     value.reflectivity = reflectivity.as<float>();

@@ -1,8 +1,10 @@
 #ifndef SCENE_H
 #define SCENE_H
 
+#include <functional>
 #include <vector>
 #include "geometry.h"
+#include "texture.h"
 #include "vec3f.h"
 
 struct resolution_t {
@@ -17,9 +19,11 @@ struct light_t {
 
 struct material_t {
   vec3f color;
+  vec3f secondary_color;
   float opacity;
   float refractive_index;
   float reflectivity;
+  tex3d_lookup_t texture;
 };
 
 struct scene_t {

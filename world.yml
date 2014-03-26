@@ -1,5 +1,5 @@
-resolution: [600, 600]
-samples: 1
+resolution: [1200, 1200]
+samples: 8
 observer:   [0,  0, -10]
 screen:
   top_left:     [-5,  5,  0]
@@ -15,6 +15,8 @@ geometry:
     - center: [-5, -5, 15]
       radius: 4
       color:  [0.6, 0.7, 0.9]
+      texture: checkerboard
+      secondary_color: [0, 0, 0]
 
     - center: [-1.5, -1.5, 5]
       radius: 2

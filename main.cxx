@@ -164,6 +164,8 @@ vec3f cast_ray(const ray_t& ray,
     float solid_component = material.opacity - material.reflectivity;
     if (cast_policy == CAST_TO_OBJECT) {
       vec3f pos = ray.position_at(rsi.t - BACKOFF);
+      vec3f material_color = material.texture ?
+        material.texture(pos) : material.color;
 
       if (solid_component > 0.f) {
         vec3f light_color(0,0,0);
@@ -172,8 +174,8 @@ vec3f cast_ray(const ray_t& ray,
           light_color += cast_ray(light_ray, s, light.color,
             CAST_TO_LIGHT, refractive_index, recursion_depth + 1u);
         }
-        color += solid_component * material.color * light_color;
-        color += solid_component * material.color * s.ambient_light;
+        color += solid_component * material_color * light_color;
+        color += solid_component * material_color * s.ambient_light;
       }
 
       if (material.reflectivity > 0.f) {
@@ -219,6 +221,8 @@ vec3f cast_ray(const ray_t& ray,
     float solid_component = material.opacity - material.reflectivity;
     if (cast_policy == CAST_TO_OBJECT) {
       vec3f pos = ray.position_at(rmi.t - BACKOFF);
+      vec3f material_color = material.texture ?
+        material.texture(pos) : material.color;
 
       if (solid_component > 0.f) {
         vec3f light_color(0,0,0);
@@ -227,8 +231,8 @@ vec3f cast_ray(const ray_t& ray,
           light_color += cast_ray(light_ray, s, light.color,
             CAST_TO_LIGHT, refractive_index, recursion_depth + 1u);
         }
-        color += solid_component * material.color * light_color;
-        color += solid_component * material.color * s.ambient_light;
+        color += solid_component * material_color * light_color;
+        color += solid_component * material_color * s.ambient_light;
       }
 
       if (material.reflectivity > 0.f) {
