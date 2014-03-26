@@ -190,6 +190,9 @@ inline ray_sphere_intersect get_ray_sphere_intersect(
   // if the first element is nan no element will compare as less than it
   auto begin_near_it = std::find_if_not(
     intersections.cbegin(), intersections.cend(), isnanf);
+  if (begin_near_it == intersections.cend()) {
+    return rsi;
+  }
   auto near_it = std::min_element(begin_near_it, intersections.cend());
   auto near_geometry_it = geometry.begin() +
     std::distance(intersections.cbegin(), near_it);
@@ -227,7 +230,6 @@ inline ray_triangle_intersect get_ray_triangle_intersect(
 {
   assert(abs_fuzzy_eq(magnitude(r.direction), 1, 1e-3));
 
-  // todo: add bounding sphere intersect test
   std::vector<ray_triangle_intersect> intersects;
   for (size_t i = 0u; i < m.face_normals.size(); ++i) {
     vec3f v1 = m.vertexes[m.indexes[3*i]];
@@ -313,6 +315,9 @@ inline ray_mesh_intersect get_ray_mesh_intersect(
   // if the first element is nan no element will compare as less than it
   auto begin_near_it = std::find_if(
     intersections.cbegin(), intersections.cend(), intersect_exists);
+  if (begin_near_it == intersections.cend()) {
+    return rmi;
+  }
   auto near_it = std::min_element(begin_near_it, intersections.cend());
 
   auto near_geometry_it = geometry.begin() +

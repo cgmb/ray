@@ -1,6 +1,10 @@
 #!/bin/sh
 if [ $# -gt 0 ]; then
+  if [ "$1" = "memcheck" ]; then
+    shift
+    SUFFIX='2>&1 | asan_symbolize.py | c++filt'
+  fi
   EXE=$1
   shift
-  LD_LIBRARY_PATH=3rdparty/lib $EXE $@
+  eval "LD_LIBRARY_PATH=3rdparty/lib $EXE $@ $SUFFIX"
 fi
