@@ -89,6 +89,7 @@ struct mesh_t {
   void calculate_normals() {
     // calculate face normals and collect data for vertex normals
     // also calculate face centers
+    std::fill(vertex_normals.begin(), vertex_normals.end(), vec3f(0,0,0));
     for (size_t i = 0u; i < face_normals.size(); ++i) {
       unsigned short i1 = indexes[3*i];
       unsigned short i2 = indexes[3*i + 1];
