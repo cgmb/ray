@@ -273,39 +273,48 @@ vec3f cast_ray(const ray_t& ray,
   return color;
 }
 
+void generate_pixels(unsigned thread_id,
+  unsigned thread_count,
+  const scene_t& s,
+  const vec3f& screen_offset_per_px_x,
+  const vec3f& screen_offset_per_px_y,
+  image& img)
+{
+  for (unsigned y = thread_id; y < s.res.y; y += thread_count) {
+    std::mt19937 engine(y);
+    std::uniform_real_distribution<float> distribution(0.f, 1.f);
+    auto rng = std::bind(distribution, engine);
+    for (unsigned x = 0u; x < s.res.x; ++x) {
+      vec3f px_color = { 0, 0, 0 };
+      for (unsigned sample = 0u; sample < s.sample_count; ++sample) {
+        vec3f background_color = { 0, 0, 0 };
+        vec3f pixel_pos = s.screen_top_left +
+          (x + rng()) * screen_offset_per_px_x +
+          (y + rng()) * screen_offset_per_px_y;
+        ray_t eye_ray = { pixel_pos, normalized(pixel_pos - s.observer) };
+        px_color += cast_ray(eye_ray, s, background_color,
+          CAST_TO_OBJECT, 1.f, 0u);
+      }
+      img.px(x, y) = px_color / s.sample_count;
+    }
+  }
+}
+
 image generate_image(const scene_t& s, unsigned thread_count)
 {
-  const vec3f observer = s.observer;
-  const resolution_t res = s.res;
-  const unsigned sample_count = s.sample_count;
-  const vec3f screen_top_left = s.screen_top_left;
   const vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
   const vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
 
-  image img(res.x, res.y);
+  image img(s.res.x, s.res.y);
   std::vector<std::thread> threads(thread_count);
 
   for (unsigned thread_id = 0u; thread_id < threads.size(); ++thread_id) {
-    threads[thread_id] = std::thread([&,thread_id]() {
-      for (unsigned y = thread_id; y < res.y; y += thread_count) {
-        std::mt19937 engine(y);
-        std::uniform_real_distribution<float> distribution(0.f, 1.f);
-        auto rng = std::bind(distribution, engine);
-        for (unsigned x = 0u; x < res.x; ++x) {
-          vec3f px_color = { 0, 0, 0 };
-          for (unsigned sample = 0u; sample < sample_count; ++sample) {
-            vec3f background_color = { 0, 0, 0 };
-            vec3f pixel_pos = screen_top_left +
-              (x + rng()) * screen_offset_per_px_x +
-              (y + rng()) * screen_offset_per_px_y;
-            ray_t eye_ray = { pixel_pos, normalized(pixel_pos - observer) };
-            px_color += cast_ray(eye_ray, s, background_color,
-              CAST_TO_OBJECT, 1.f, 0u);
-          }
-          img.px(x, y) = px_color / sample_count;
-        }
-      }
-    });
+    threads[thread_id] = std::thread(std::bind(generate_pixels, thread_id,
+      std::cref(thread_count),
+      std::cref(s),
+      std::cref(screen_offset_per_px_x),
+      std::cref(screen_offset_per_px_y),
+      std::ref(img)));
   }
 
   for (auto& thread : threads) {
