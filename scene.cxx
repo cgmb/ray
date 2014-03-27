@@ -88,7 +88,7 @@ tex3d_lookup_t retrieve_optional_texture(const YAML::Node& node,
     if (name == "checkerboard") {
       value = std::bind(algo_texture::checkerboard_3d, _1,
         color, secondary_color);;
-    } else if (name == "gridlines") {
+    } else if (name == "dotsnlines") {
 
       float period = 1.f;
       if (YAML::Node p = node["period"]) {
@@ -100,7 +100,7 @@ tex3d_lookup_t retrieve_optional_texture(const YAML::Node& node,
         width = w.as<float>();
       }
 
-      value = std::bind(algo_texture::gridlines_3d, _1, period, width,
+      value = std::bind(algo_texture::dotsnlines_3d, _1, period, width,
         color, secondary_color);
     } else {
       throw std::runtime_error("Unknown texture type!");
