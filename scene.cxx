@@ -198,6 +198,8 @@ std::vector<light_t> parse_sphere_light_node(const YAML::Node& node) {
   vec3f center;
   if (YAML::Node n = node["center"]) {
     center = parse_vec3f_node(n);
+  } else if (YAML::Node n = node["position"]) {
+    center = parse_vec3f_node(n);
   } else {
     throw std::runtime_error("Sphere light requires center!");
   }

@@ -52,6 +52,11 @@ struct png_write_context {
   png_infop info_ptr;
 };
 
+/* Saving 24bit PNG based on tutorial from http://www.lemoda.net/c/write-png/
+
+   todo: save the data directly from the img buffer
+   http://stackoverflow.com/q/1821806/331041
+*/
 bool save_png_to_file(const image_24bit& bitmap, const char* path)
 {
   unique_file_ptr file(fopen(path, "wb"), null_friendly_fclose);
