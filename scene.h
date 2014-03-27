@@ -20,6 +20,11 @@ struct light_t {
 struct material_t {
   vec3f color;
   vec3f secondary_color;
+  float k_flat;
+  float k_ambient;
+  float k_specular;
+  float k_specular_n;
+  float k_matte;
   float opacity;
   float refractive_index;
   float reflectivity;
@@ -56,11 +61,7 @@ inline vec3f scene_t::screen_offset_per_px_y() const {
   return screen_offset_y / (res.y + 1u);
 }
 
-
-namespace YAML { class Node; };
-
 scene_t load_scene_from_file(const char* scene_file);
 scene_t try_load_scene_from_file(const char* scene_file, int error_exit_code);
-scene_t generate_default_scene();
 
 #endif

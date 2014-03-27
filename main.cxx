@@ -171,12 +171,29 @@ vec3f cast_ray(const ray_t& ray,
         vec3f light_color(0,0,0);
         for (const light_t& light : s.lights) {
           ray_t light_ray = { pos, normalized(light.position - pos) };
-          light_color += cast_ray(light_ray, s, light.color,
+          vec3f one_light_color = cast_ray(light_ray, s, light.color,
             CAST_TO_LIGHT, refractive_index, recursion_depth + 1u);
+          if (one_light_color != vec3f(0,0,0) &&
+            (material.k_matte > 0.f || material.k_specular > 0.f))
+          {
+            // phong shading
+            vec3f normal = rsi.near_geometry_it->normal_at(pos);
+            float matte_light =
+              std::max(dot(normal, light_ray.direction), 0.f);
+            float specular_light = std::max(std::pow(
+              dot(ray.direction, reflected(-ray.direction, normal)),
+              material.k_specular_n), 0.f);
+            light_color += one_light_color *
+              (material.k_matte * matte_light +
+              material.k_specular * specular_light);
+          }
+          // normal / observer independant lighting
+          // it's fast and looks nice for some things
+          light_color += material.k_flat * one_light_color;
         }
+        // add the combined flat/specular/matte lights wih ambient light
         color += solid_component * material_color * light_color;
-        color += solid_component * material_color * s.ambient_light;
-        color += solid_component * material_color * s.ambient_light;
+        color += solid_component * material_color * material.k_ambient * s.ambient_light;
       }
 
       if (material.reflectivity > 0.f) {
@@ -227,11 +244,27 @@ vec3f cast_ray(const ray_t& ray,
         vec3f light_color(0,0,0);
         for (const light_t& light : s.lights) {
           ray_t light_ray = { pos, normalized(light.position - pos) };
-          light_color += cast_ray(light_ray, s, light.color,
+          vec3f one_light_color = cast_ray(light_ray, s, light.color,
             CAST_TO_LIGHT, refractive_index, recursion_depth + 1u);
+          if (one_light_color != vec3f(0,0,0) &&
+            (material.k_matte > 0.f || material.k_specular > 0.f))
+          {
+            // phong shading
+            vec3f normal = rsi.near_geometry_it->normal_at(pos);
+            float matte_light =
+              std::max(dot(normal, light_ray.direction), 0.f);
+            float specular_light = std::max(std::pow(
+              dot(ray.direction, reflected(-ray.direction, normal)),
+              material.k_specular_n), 0.f);
+            light_color += one_light_color *
+              (material.k_matte * matte_light +
+              material.k_specular * specular_light);
+          }
+          // normal / observer independant lighting
+          // it's fast and looks nice for some things
+          light_color += material.k_flat * one_light_color;
         }
         color += solid_component * material_color * light_color;
-        color += solid_component * material_color * s.ambient_light;
         color += solid_component * material_color * s.ambient_light;
       }
 

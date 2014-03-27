@@ -136,6 +136,40 @@ material_t retrieve_optional_material(const YAML::Node& node) {
     value.opacity = 1.f;
   }
 
+  if (YAML::Node n = node["k_ambient"]) {
+    value.k_ambient = n.as<float>();
+  } else {
+    value.k_ambient = 1.f;
+  }
+
+  if (YAML::Node n = node["k_matte"]) {
+    value.k_matte = n.as<float>();
+  } else {
+    value.k_matte = 0.0f;
+  }
+
+  if (YAML::Node n = node["k_specular"]) {
+    value.k_specular = n.as<float>();
+  } else {
+    value.k_specular = 0.0f;
+  }
+
+  if (YAML::Node n = node["k_specular_n"]) {
+    value.k_specular_n = n.as<float>();
+    if (std::floor(value.k_specular_n) != value.k_specular_n) {
+      throw std::runtime_error("Fractional k_specular_n values not allowed!");
+    }
+  } else {
+    value.k_specular_n = 2.f;
+  }
+
+  if (YAML::Node n = node["k_flat"]) {
+    value.k_flat = n.as<float>();
+  } else {
+    value.k_flat = (value.k_matte > 0.f || value.k_specular > 0.f) ?
+      0.f : 1.f;
+  }
+
   return value;
 }
 
@@ -343,17 +377,4 @@ scene_t try_load_scene_from_file(const char* scene_file, int error_exit_code) {
       << e.what() << std::endl;
     std::exit(error_exit_code);
   }
-}
-
-scene_t generate_default_scene() {
-  scene_t s;
-  s.observer = vec3f{ 0, 0, -10 };
-  s.screen_top_left = vec3f{ -5, 5, 0 };
-  s.screen_top_right = vec3f{ 5, 5, 0 };
-  s.screen_bottom_right = vec3f{ 5, -5, 0 };
-  s.res = resolution_t{ 100, 100 };
-  s.sample_count = 1;
-  s.geometry.spheres.push_back(sphere_t{ vec3f(0, 0, 10), 3 });
-  s.lights.push_back(light_t{ vec3f(0, 0, -10), vec3f(1, 1, 1) });
-  return s;
 }
