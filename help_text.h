@@ -8,6 +8,7 @@ const char* const help_text =
   "[--scene <file>] the scene input file (default: world.yml)\n"
   "[--output <file>] the rendered output file (default: output.png)\n"
   "[--threads <number>] the number of rendering threads (default: 1)\n"
+  "[--progress] displayed a progress indicator as the scene is rendered\n"
   "[--help <topic>] displays this help, or help for a specific topic\n"
   "  topics include: scene";
 

@@ -7,7 +7,6 @@
 #include "help_text.h"
 #include "image.h"
 #include "scene.h"
-#include "vec2f.h"
 #include "vec3f.h"
 
 enum {
@@ -32,6 +31,7 @@ struct user_inputs {
     , thread_count(1)
     , requests_help(false)
     , requests_help_scene(false)
+    , display_progress(false)
   {
   }
 
@@ -40,6 +40,7 @@ struct user_inputs {
   unsigned thread_count;
   bool requests_help;
   bool requests_help_scene;
+  bool display_progress;
 };
 
 user_inputs parse_inputs(int argc, char** argv) {
@@ -66,6 +67,8 @@ user_inputs parse_inputs(int argc, char** argv) {
       next_expected_arg = OUTPUT_FILE_ARG;
     } else if (!strcmp(argv[i], "--threads") || !strcmp(argv[i], "-j")) {
       next_expected_arg = THREAD_COUNT_ARG;
+    } else if (!strcmp(argv[i], "--progress")) {
+      in.display_progress = true;;
     } else if (!strcmp(argv[i], "--help")) {
       in.requests_help = true;
       next_expected_arg = HELP_ARG;
@@ -310,6 +313,7 @@ void generate_pixels(unsigned thread_id,
   const scene_t& s,
   const vec3f& screen_offset_per_px_x,
   const vec3f& screen_offset_per_px_y,
+  bool display_progress,
   image& img)
 {
   for (unsigned y = thread_id; y < s.res.y; y += thread_count) {
@@ -329,10 +333,18 @@ void generate_pixels(unsigned thread_id,
       }
       img.px(x, y) = px_color / s.sample_count;
     }
+    if (thread_id == 0 && display_progress) {
+      float current_progress = 100.f * float(y) / s.res.y;
+      float previous_progress = 100.f * (float(y) - 1) / s.res.y;
+      if (std::floor(current_progress) != std::floor(previous_progress)) {
+        std::cout << current_progress << "%" << std::endl;
+      }
+    }
   }
 }
 
-image generate_image(const scene_t& s, unsigned thread_count)
+image generate_image(const scene_t& s, unsigned thread_count,
+  bool display_progress)
 {
   const vec3f screen_offset_per_px_x = s.screen_offset_per_px_x();
   const vec3f screen_offset_per_px_y = s.screen_offset_per_px_y();
@@ -342,10 +354,11 @@ image generate_image(const scene_t& s, unsigned thread_count)
 
   for (unsigned thread_id = 0u; thread_id < threads.size(); ++thread_id) {
     threads[thread_id] = std::thread(std::bind(generate_pixels, thread_id,
-      std::cref(thread_count),
+      thread_count,
       std::cref(s),
       std::cref(screen_offset_per_px_x),
       std::cref(screen_offset_per_px_y),
+      display_progress,
       std::ref(img)));
   }
 
@@ -369,7 +382,7 @@ int main(int argc, char** argv) {
   const scene_t scene = try_load_scene_from_file(
     get_with_default(user.scene_file, "world.yml"), EXIT_FAIL_LOAD);
 
-  image img = generate_image(scene, user.thread_count);
+  image img = generate_image(scene, user.thread_count, user.display_progress);
   img.clamp_colors();
   if (!img.save_as_png(get_with_default(user.output_file, "output.png"))) {
     return EXIT_FAIL_SAVE;
