@@ -179,10 +179,10 @@ vec3f cast_ray(const ray_t& ray,
             // phong shading
             vec3f normal = rsi.near_geometry_it->normal_at(pos);
             float matte_light =
-              std::max(dot(normal, light_ray.direction), 0.f);
-            float specular_light = std::max(std::pow(
-              dot(ray.direction, reflected(-ray.direction, normal)),
-              material.k_specular_n), 0.f);
+              std::max(dot(normalized(normal), light_ray.direction), 0.f);
+            float specular_light = std::pow(std::max(
+              dot(ray.direction, reflected(light_ray.direction, normalized(normal))),
+              0.f), material.k_specular_n);
             light_color += one_light_color *
               (material.k_matte * matte_light +
               material.k_specular * specular_light);
