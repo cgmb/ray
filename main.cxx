@@ -176,6 +176,7 @@ vec3f cast_ray(const ray_t& ray,
         }
         color += solid_component * material_color * light_color;
         color += solid_component * material_color * s.ambient_light;
+        color += solid_component * material_color * s.ambient_light;
       }
 
       if (material.reflectivity > 0.f) {
@@ -202,16 +203,14 @@ vec3f cast_ray(const ray_t& ray,
             default_color, cast_policy, material.refractive_index,
             recursion_depth + 1u);
         } else {
-          // todo: handle total internal reflection more nicely
-          std::cout << "Max recurse depth!" << std::endl;
+          std::cerr << "Hit max recurse depth!" << std::endl;
         }
       }
 
     } else { // cast_policy == CAST_TO_LIGHT
-      // we hit an object while looking for our light
-      // that means we're shadowed...
-      // but it still has ambient light...
-      color = s.ambient_light * solid_component * material.color;
+      // We hit an object while looking for our light.
+      // That means we're shadowed...
+      color = vec3f(0,0,0);
     }
   } else if (nearest == MESH_NEAREST) {
 
@@ -232,6 +231,7 @@ vec3f cast_ray(const ray_t& ray,
             CAST_TO_LIGHT, refractive_index, recursion_depth + 1u);
         }
         color += solid_component * material_color * light_color;
+        color += solid_component * material_color * s.ambient_light;
         color += solid_component * material_color * s.ambient_light;
       }
 
@@ -259,14 +259,13 @@ vec3f cast_ray(const ray_t& ray,
             default_color, cast_policy, material.refractive_index,
             recursion_depth + 1u);
         } else {
-          // todo: handle total internal reflection more nicely
-          std::cout << "Max recurse depth!" << std::endl;
+          std::cerr << "Hit max recurse depth!" << std::endl;
         }
       }
 
     } else { // cast_policy == CAST_TO_LIGHT
       // shadowed...
-      color = s.ambient_light * solid_component * material.color;
+      color = vec3f(0,0,0);
     }
 
   }
