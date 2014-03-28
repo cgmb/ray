@@ -20,8 +20,9 @@ BDIR=.build
 BTDIR=$(BDIR)/$(TDIR)
 
 THIRDPARTY=3rdparty
+MD2DIR=$(THIRDPARTY)/md2
 LIBPATH=-L$(THIRDPARTY)/lib
-INCPATH=-I$(THIRDPARTY)/include
+INCPATH=-I$(THIRDPARTY)/include -I$(MD2DIR)
 
 .PHONY: all release debug memcheck optimize clean run test generator
 
@@ -38,7 +39,8 @@ debug: $(EXENAME)
 $(BDIR):
 	mkdir -p $(BDIR)
 
-$(EXENAME): $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o $(BDIR)/texture.o
+$(EXENAME): $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o $(BDIR)/texture.o\
+ $(MD2DIR)/md2.o
 	$(CC) $(BDIR)/main.o $(BDIR)/image.o $(BDIR)/scene.o $(BDIR)/texture.o\
  -o $(EXENAME) $(CFLAGS) $(LIBPATH) -lyaml-cpp $(LIBS) $(LINKFLAGS)
 
@@ -48,11 +50,14 @@ $(BDIR)/main.o: main.cxx *.h | $(BDIR)
 $(BDIR)/image.o: image.cxx image.h vec3f.h | $(BDIR)
 	$(CC) $< -c -o $@ $(CFLAGS)
 
-$(BDIR)/scene.o: scene.cxx scene.h texture.h vec3f.h | $(BDIR)
+$(BDIR)/scene.o: scene.cxx scene.h texture.h vec3f.h $(MD2DIR)/md2.h | $(BDIR)
 	$(CC) $< -c -o $@ $(CFLAGS) $(INCPATH) 
 
 $(BDIR)/texture.o: texture.cxx texture.h vec3f.h | $(BDIR)
 	$(CC) $< -c -o $@ $(CFLAGS)
+
+$(MD2DIR)/md2.o: $(MD2DIR)/md2.cpp $(MD2DIR)/md2.h
+	$(CC) $< -c -o $@ $(CFLAGS) $(INCPATH)
 
 run:
 	./$(EXENAME)

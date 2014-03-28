@@ -1,5 +1,6 @@
 #include <functional>
 #include <iostream>
+#include <md2.h>
 #include <yaml-cpp/yaml.h>
 #include "scene.h"
 
@@ -253,6 +254,58 @@ std::vector<light_t> parse_sphere_light_node(const YAML::Node& node) {
   return value;
 }
 
+void load_md2(const std::string& filename,
+  std::vector<vec3f>& vertexes,
+  std::vector<unsigned short>& indexes)
+{
+  MD2 model;
+  if (!model.LoadModel(filename.c_str())) {
+    throw std::runtime_error("Failed to load \"" + filename + "\"!");
+  }
+
+  size_t index_count = 3 * model.num_tris;
+  if (index_count == 0) {
+    throw std::runtime_error("Empty model!");
+  }
+
+  // extract the indexes from the tris structs
+  indexes.resize(index_count);
+  for (int i = 0; i < model.num_tris; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      short index = model.tris[i].index_xyz[j];
+      if (index < 0) {
+        throw std::runtime_error("Invalid index value!");
+      }
+      indexes[3 * i + j] = index;
+    }
+  }
+
+  vertexes.resize(model.num_xyz);
+  for (int i = 0; i < model.num_xyz; ++i) {
+    std::array<float,3> v = model.m_vertices[i];
+    vertexes[i] = vec3f(v[0], v[1], v[2]);
+  }
+}
+
+void apply_transform(const YAML::Node& node,
+  std::vector<vec3f>& v)
+{
+  if (node.size() == 16u) {
+    float model_matrix[16];
+    for (size_t i = 0; i < 16u; ++i) {
+      model_matrix[i] = node[i].as<float>();
+    }
+    for (size_t i = 0; i < v.size(); ++i) {
+      float temp[4] = { v[i][0], v[i][1], v[i][2], 1.f };
+      float o[4];
+      m4f_mul_v4fo(model_matrix, temp, o);
+      v[i] = vec3f(o[0], o[1], o[2]);
+    }
+  } else {
+    throw std::runtime_error("Incorrect number of nodes on m4f");
+  }
+}
+
 mesh_t parse_mesh_node(const YAML::Node& node) {
   std::vector<vec3f> v;
   std::vector<unsigned short> i;
@@ -277,7 +330,7 @@ mesh_t parse_mesh_node(const YAML::Node& node) {
       }
     }
   } else if (YAML::Node file = node["file"]) {
-    throw std::runtime_error("External mesh files not supported (yet)!");
+    load_md2(file.as<std::string>(), v, i);
   } else {
     throw std::runtime_error("Mesh requires vertexes!");
   }
@@ -287,6 +340,14 @@ mesh_t parse_mesh_node(const YAML::Node& node) {
     smooth = n.as<bool>();
   } else {
     smooth = false;
+  }
+
+  if (YAML::Node n = node["model_transform"]) {
+    apply_transform(n, v);
+  }
+
+  if (YAML::Node n = node["transform"]) {
+    apply_transform(n, v);
   }
 
   return mesh_t(v, i, smooth);
