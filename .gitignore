@@ -1,5 +1,6 @@
 /ray
 /run_tests
+/gencurve
 /*.png
 /3rdparty/include
 /3rdparty/lib

@@ -13,6 +13,7 @@ EXENAME=ray
 # test directory
 TDIR=test
 TEXENAME=run_tests
+GENNAME=gencurve
 # build directory
 BDIR=.build
 # build directory for tests
@@ -22,7 +23,7 @@ THIRDPARTY=3rdparty
 LIBPATH=-L$(THIRDPARTY)/lib
 INCPATH=-I$(THIRDPARTY)/include
 
-.PHONY: all release debug memcheck optimize clean run test
+.PHONY: all release debug memcheck optimize clean run test generator
 
 all: release
 
@@ -78,5 +79,8 @@ $(TEXENAME): $(BTDIR)/test_main.o $(BTDIR)/test_image.o\
 test: $(TEXENAME)
 	./$(TEXENAME)
 
+$(GENNAME): generator.cxx *.h
+	$(CC) $< -o $(GENNAME) $(CFLAGS)
+
 clean:
-	rm -rf $(BDIR) $(EXENAME) $(TEXENAME)
+	rm -rf $(BDIR) $(EXENAME) $(TEXENAME) $(GENNAME)
