@@ -12,6 +12,8 @@
 
 using std::placeholders::_1;
 
+/* ray- a representation of a line starting at some point
+*/
 struct ray_t {
   static ray_t from_point_vector(const vec3f& start, const vec3f& direction) {
     return ray_t{ start, direction };
@@ -26,6 +28,8 @@ struct ray_t {
   vec3f direction;
 };
 
+/* sphere - a representation of a perfect sphere
+*/
 struct sphere_t {
   static sphere_t from_center_radius_squared(
     const vec3f& center, float radius_squared)
@@ -68,18 +72,24 @@ sphere_t get_bounding_sphere(iterator begin, iterator end) {
   return sphere_t::from_center_radius_squared(center, radius * radius);
 }
 
+/* mesh - a representation of an indexed triangle mesh
+*/
 struct mesh_t {
   mesh_t()
+    : bounding_sphere(sphere_t{vec3f(0,0,0), 0})
+    , smooth(false)
   {
   }
 
   mesh_t(
     const std::vector<vec3f>& vertexes,
-    const std::vector<unsigned short>& indexes)
+    const std::vector<unsigned short>& indexes,
+    bool smooth = false)
     : vertexes(vertexes)
     , indexes(indexes)
     , vertex_normals(vertexes.size())
     , face_normals(indexes.size() / 3u)
+    , smooth(smooth)
   {
     assert(vertexes.size() <= std::numeric_limits<unsigned short>::max());
     calculate_normals();
@@ -95,7 +105,7 @@ struct mesh_t {
       unsigned short i2 = indexes[3*i + 1];
       unsigned short i3 = indexes[3*i + 2];
 
-      vec3f normal = triangle_normal(
+      vec3f normal = -triangle_normal(
         vertexes[i1], vertexes[i2], vertexes[i3]);
       face_normals[i] = normal;
 
@@ -118,6 +128,7 @@ struct mesh_t {
   std::vector<vec3f> vertex_normals;
   std::vector<vec3f> face_normals;
   sphere_t bounding_sphere;
+  bool smooth;
 };
 
 // todo: move to more appropriate header
@@ -161,6 +172,8 @@ inline vec3f near_intersect(const ray_t& r, const sphere_t& s) {
   return r.start + (near_intersect_param(r, s) * r.direction);
 }
 
+/* Information about a collision between a ray and a vector of spheres
+*/
 struct ray_sphere_intersect {
   float t;
   typename std::vector<sphere_t>::const_iterator near_geometry_it;
@@ -202,6 +215,8 @@ inline ray_sphere_intersect get_ray_sphere_intersect(
   return rsi;
 }
 
+/* Information about a collision between a ray and a triangle
+*/
 struct ray_triangle_intersect {
   float t;
   size_t near_face_index;
@@ -281,6 +296,8 @@ inline ray_triangle_intersect get_possible_ray_triangle_intersect(
   }
 }
 
+/* Information about the intersect between a ray and a list of triangle meshes
+*/
 struct ray_mesh_intersect {
   float t;
   size_t near_face_index;
@@ -294,8 +311,33 @@ struct ray_mesh_intersect {
     return std::distance(m.begin(), near_geometry_it);
   }
 
-  vec3f face_normal() const {
-    return near_geometry_it->face_normals[near_face_index];
+  // todo: move to mesh_t
+  vec3f get_normal_at(const vec3f& pos) const {
+    if (near_geometry_it->smooth) {
+
+      // use barycentric coordinates.
+      // we probably should have used those for intersection tests
+      unsigned short i1 = near_geometry_it->indexes[3u * near_face_index];
+      unsigned short i2 = near_geometry_it->indexes[3u * near_face_index + 1];
+      unsigned short i3 = near_geometry_it->indexes[3u * near_face_index + 2];
+      vec3f v1 = near_geometry_it->vertexes[i1];
+      vec3f v2 = near_geometry_it->vertexes[i2];
+      vec3f v3 = near_geometry_it->vertexes[i3];
+      vec3f n1 = near_geometry_it->vertex_normals[i1];
+      vec3f n2 = near_geometry_it->vertex_normals[i2];
+      vec3f n3 = near_geometry_it->vertex_normals[i3];
+
+      float area = 0.5f * magnitude(cross(v2-v1, v3-v1));
+      vec3f v1pos = pos-v1;
+      float u = 0.5f * magnitude(cross(v1pos, v3-v1)) / area;
+      float v = 0.5f * magnitude(cross(v1pos, v2-v1)) / area;
+      float w = 1.f - u - v;
+
+      vec3f n = (w*n1 + u*n2 + v*n3);
+      return normalized(n);
+    } else {
+      return near_geometry_it->face_normals[near_face_index];
+    }
   }
 };
 
@@ -330,6 +372,8 @@ inline ray_mesh_intersect get_ray_mesh_intersect(
   return rmi;
 }
 
+/* A collection of 3D shapes
+*/
 struct geometry_t {
   std::vector<sphere_t> spheres;
   std::vector<mesh_t> meshes;

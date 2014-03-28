@@ -1,4 +1,5 @@
 #include <functional>
+#include <iostream>
 #include <yaml-cpp/yaml.h>
 #include "scene.h"
 
@@ -281,7 +282,14 @@ mesh_t parse_mesh_node(const YAML::Node& node) {
     throw std::runtime_error("Mesh requires vertexes!");
   }
 
-  return mesh_t(v,i);
+  bool smooth;
+  if (YAML::Node n = node["smooth"]) {
+    smooth = n.as<bool>();
+  } else {
+    smooth = false;
+  }
+
+  return mesh_t(v, i, smooth);
 }
 
 } // namespace

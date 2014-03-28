@@ -4,7 +4,7 @@
 #include <iostream>
 #include "vec3f.h"
 
-std::ostream& operator<<(std::ostream& out, const vec3f& v) {
+inline std::ostream& operator<<(std::ostream& out, const vec3f& v) {
   return out << "[" << v[0] << ", " << v[1] << ", " << v[2] << "]";
 }
 

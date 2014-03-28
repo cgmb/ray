@@ -131,4 +131,9 @@ inline vec3f nextafter(const vec3f& x, const vec3f& y) {
     std::nextafter(x[2], y[2]));
 }
 
+inline vec3f interpolate(const vec3f& begin, const vec3f& end, float fraction)
+{
+  return begin + fraction * (end - begin);
+}
+
 #endif

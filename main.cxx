@@ -253,7 +253,7 @@ vec3f cast_ray(const ray_t& ray,
             (material.k_matte > 0.f || material.k_specular > 0.f))
           {
             // phong shading
-            vec3f normal = rsi.near_geometry_it->normal_at(pos);
+            vec3f normal = rmi.get_normal_at(pos);
             float matte_light =
               std::max(dot(normal, light_ray.direction), 0.f);
             float specular_light = std::max(std::pow(
@@ -268,11 +268,11 @@ vec3f cast_ray(const ray_t& ray,
           light_color += material.k_flat * one_light_color;
         }
         color += solid_component * material_color * light_color;
-        color += solid_component * material_color * s.ambient_light;
+        color += solid_component * material_color * material.k_ambient * s.ambient_light;
       }
 
       if (material.reflectivity > 0.f) {
-        vec3f normal = rmi.face_normal();
+        vec3f normal = rmi.get_normal_at(pos);
         ray_t reflected_ray = { pos, reflected(ray.direction, normal) };
         if (recursion_depth < MAX_RECURSE) {
           color += material.reflectivity * material.color *
@@ -284,7 +284,7 @@ vec3f cast_ray(const ray_t& ray,
       float translucence = 1.f - material.opacity;
       if (translucence > 0.f) {
         vec3f inside_pos = ray.position_at(rsi.t + BACKOFF);
-        vec3f normal = rmi.face_normal();
+        vec3f normal = rmi.get_normal_at(inside_pos);
         if (dot(ray.direction, normal) > 0.f) {
           normal = -normal;
         }
