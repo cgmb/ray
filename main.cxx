@@ -132,6 +132,150 @@ const unsigned MAX_RECURSE = 10u;
 // appropriate.
 const float BACKOFF = 1e-3f;
 
+// takes two random numbers [0..1] and returns a random direction
+//vec3f random_direction(float x1, float x2) {
+//  const float TWO_PI = 2 * M_PI;
+//  x2 = 2 * x2 - 1; // [-1..1]
+//  return vec3f(sin(TWO_PI * x1), cos(TWO_PI * x1), 2*asin(x2)/M_PI);
+//}
+
+template<class T>
+vec3f random_direction(T& rng) {
+  vec3f v;
+  float m2;
+  do {
+    v = vec3f(rng(), rng(), rng());
+    m2 = v.x()*v.x() + v.y()*v.y() + v.z()*v.z();
+  } while(m2 > 1);
+  return v / sqrt(m2);
+}
+
+template<class T>
+vec3f random_downward_direction(T& rng) {
+  vec3f v = random_direction(rng);
+  if (v.y() > 0) {
+    v[1] = -v[1];
+  }
+  return v;
+}
+
+struct photon_hit {
+  vec3f position;
+  vec3f direction;
+  vec3f color;
+};
+
+struct photon_hits {
+  photon_hits() = default;
+  photon_hits(size_t sphere_count, size_t mesh_count)
+    : sphere_hits(sphere_count)
+    , mesh_hits(mesh_count)
+  {}
+
+  std::vector<std::vector<photon_hit>> sphere_hits;
+  std::vector<std::vector<photon_hit>> mesh_hits;
+};
+
+photon_hits g_photon_hits;
+
+// each object gets a vector of photons with a location, direction and color
+void add_to_sphere_photon_map(size_t obj_idx,
+  const vec3f& position, const vec3f& direction, const vec3f& energy) {
+  g_photon_hits.sphere_hits[obj_idx].push_back(
+    photon_hit{position, direction, energy});
+}
+
+void add_to_mesh_photon_map(size_t obj_idx,
+  const vec3f& position, const vec3f& direction, const vec3f& energy) {
+  g_photon_hits.mesh_hits[obj_idx].push_back(
+    photon_hit{position, direction, energy});
+}
+
+void map_photon(const ray_t& ray, const scene_t& s, const vec3f& energy,
+  float refractive_index, bool indirect, unsigned int recursion_depth) {
+  ray_sphere_intersect rsi = get_ray_sphere_intersect(ray, s.geometry.spheres);
+  ray_mesh_intersect rmi = get_ray_mesh_intersect(ray, s.geometry.meshes);
+
+  nearest_t nearest =
+    nearest_intersect(rsi, s.geometry.spheres, rmi, s.geometry.meshes);
+  if (nearest == SPHERE_NEAREST) {
+    size_t sphere_idx = rsi.index_in(s.geometry.spheres);
+    material_t material = s.sphere_materials[sphere_idx];
+    if(material.opacity < 1.f) {
+      vec3f inside_pos = ray.position_at(rsi.t + BACKOFF);
+      vec3f normal = rsi.near_geometry_it->normal_at(inside_pos);
+      if (dot(ray.direction, normal) > 0.f) {
+        normal = -normal;
+      }
+      ray_t refracted_ray = { inside_pos, refracted(ray.direction, normal,
+        refractive_index, material.refractive_index) };
+      if (recursion_depth < MAX_RECURSE) {
+        // todo: handle refractive index for leaving a volume
+        map_photon(refracted_ray, s, energy, material.refractive_index, true,
+          recursion_depth + 1u);
+      } else {
+        std::cerr << "Hit max recurse depth!" << std::endl;
+      }
+    // todo: handle reflective
+    } else if (indirect) {
+      add_to_sphere_photon_map(sphere_idx, ray.position_at(rsi.t), ray.direction, energy);
+    }
+  } else if (nearest == MESH_NEAREST) {
+    size_t mesh_idx = rmi.index_in(s.geometry.meshes);
+    material_t material = s.mesh_materials[mesh_idx];
+    if (material.opacity < 1.f) {
+      vec3f inside_pos = ray.position_at(rsi.t + BACKOFF);
+      vec3f normal = rmi.get_normal_at(inside_pos);
+      if (dot(ray.direction, normal) > 0.f) {
+        normal = -normal;
+      }
+      ray_t refracted_ray = { inside_pos, refracted(ray.direction, normal,
+        refractive_index, material.refractive_index) };
+      if (recursion_depth < MAX_RECURSE) {
+        map_photon(refracted_ray, s, energy, material.refractive_index, true,
+          recursion_depth + 1u);
+      } else {
+        std::cerr << "Hit max recurse depth!" << std::endl;
+      }
+    } else if (indirect) {
+      add_to_mesh_photon_map(mesh_idx, ray.position_at(rmi.t), ray.direction, energy);
+    }
+  }
+}
+
+void create_photon_map(const scene_t& s) {
+  std::mt19937 engine(123456789u);
+  std::uniform_real_distribution<float> distribution(-1.f, 1.f);
+  auto rng = std::bind(distribution, engine);
+  g_photon_hits = photon_hits(s.geometry.spheres.size(), s.geometry.meshes.size());
+
+  float intensity = 10000;
+  for (const light_t& light : s.lights) {
+    size_t samples = 10000u;
+    for (size_t i = 0; i < samples; ++i) {
+      // todo: sample only towards surfaces
+      ray_t ray = { light.position, random_downward_direction(rng) };
+      float refractive_index = 1.f;
+      unsigned int recursion_depth = 0u;
+      bool indirect = false;
+      vec3f energy = vec3f{1.f,1.f,1.f} * intensity / samples;
+      map_photon(ray, s, energy, refractive_index, indirect, recursion_depth);
+    }
+  }
+  std::cout << g_photon_hits.sphere_hits.size() << std::endl;
+  std::cout << g_photon_hits.mesh_hits.size() << std::endl;
+  for (auto&& v : g_photon_hits.sphere_hits) {
+    std::cout << v.size() << std::endl;
+  }
+  for (auto&& v : g_photon_hits.mesh_hits) {
+    std::cout << v.size() << std::endl;
+  }
+}
+
+float matte(vec3f normal, vec3f to_light) {
+  return std::max(dot(normal, to_light), 0.f);
+}
+
 /* Casts a ray into the scene and returns a color.
 
   The default_color is the color returned if no object is hit.
@@ -181,7 +325,7 @@ vec3f cast_ray(const ray_t& ray,
           {
             // phong shading
             vec3f normal = rsi.near_geometry_it->normal_at(pos);
-            float matte_light =
+            float matte_light = //matte(normalized(normal), light_ray.direction);
               std::max(dot(normalized(normal), light_ray.direction), 0.f);
             float specular_light = std::pow(std::max(
               dot(ray.direction, reflected(light_ray.direction, normalized(normal))),
@@ -189,6 +333,19 @@ vec3f cast_ray(const ray_t& ray,
             light_color += one_light_color *
               (material.k_matte * matte_light +
               material.k_specular * specular_light);
+          } else if (one_light_color == vec3f(0,0,0)) {
+            // check photon map
+            vec3f intersect = ray.position_at(rsi.t);
+            // todo: do we need to account for the side we're on?
+            vec3f normal = normalized(rsi.near_geometry_it->normal_at(intersect));
+            size_t sphere_idx = rsi.index_in(s.geometry.spheres);
+            for (const photon_hit& photon : g_photon_hits.sphere_hits[sphere_idx]) {
+              float dist = magnitude(photon.position - intersect);
+              if (dist < 1.f) {
+                one_light_color += photon.color *
+                  sqrt(1.f - dist) * matte(normal, -photon.direction);
+              }
+            }
           }
           // normal / observer independant lighting
           // it's fast and looks nice for some things
@@ -231,6 +388,7 @@ vec3f cast_ray(const ray_t& ray,
       // We hit an object while looking for our light.
       // That means we're shadowed...
       color = vec3f(0,0,0);
+      // unless we have caustics!
     }
   } else if (nearest == MESH_NEAREST) {
 
@@ -262,6 +420,18 @@ vec3f cast_ray(const ray_t& ray,
             light_color += one_light_color *
               (material.k_matte * matte_light +
               material.k_specular * specular_light);
+          } else if (one_light_color == vec3f(0,0,0)) {
+            // check photon map
+            vec3f intersect = ray.position_at(rmi.t);
+            vec3f normal = normalized(rmi.get_normal_at(intersect));
+            size_t mesh_idx = rmi.index_in(s.geometry.meshes);
+            for (const photon_hit& photon : g_photon_hits.mesh_hits[mesh_idx]) {
+              float dist = magnitude(photon.position - intersect);
+              if (dist < 1.f) {
+                one_light_color += photon.color *
+                  sqrt(1.f - dist) * matte(normal, -photon.direction);
+              }
+            }
           }
           // normal / observer independant lighting
           // it's fast and looks nice for some things
@@ -381,6 +551,7 @@ int main(int argc, char** argv) {
 
   const scene_t scene = try_load_scene_from_file(
     get_with_default(user.scene_file, "world.yml"), EXIT_FAIL_LOAD);
+  create_photon_map(scene);
 
   image img = generate_image(scene, user.thread_count, user.display_progress);
   img.clamp_colors();
