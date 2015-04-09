@@ -244,14 +244,18 @@ void map_photon(const ray_t& ray, const scene_t& s, const vec3f& energy,
 }
 
 void create_photon_map(const scene_t& s) {
+  g_photon_hits = photon_hits(s.geometry.spheres.size(), s.geometry.meshes.size());
+  if (!s.photon_mapping_enabled) {
+    return;
+  }
+
   std::mt19937 engine(123456789u);
   std::uniform_real_distribution<float> distribution(-1.f, 1.f);
   auto rng = std::bind(distribution, engine);
-  g_photon_hits = photon_hits(s.geometry.spheres.size(), s.geometry.meshes.size());
 
-  float intensity = 10000;
   for (const light_t& light : s.lights) {
-    size_t samples = 10000u;
+    float intensity = light.intensity;
+    size_t samples = light.photon_samples;
     for (size_t i = 0; i < samples; ++i) {
       // todo: sample only towards surfaces
       ray_t ray = { light.position, random_downward_direction(rng) };

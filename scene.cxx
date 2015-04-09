@@ -188,6 +188,19 @@ light_t parse_point_light_node(const YAML::Node& node) {
   } else {
     throw std::runtime_error("Point light requires color!");
   }
+
+  if (YAML::Node intensity = node["intensity"]) {
+    value.intensity = intensity.as<unsigned>();
+  } else {
+    value.intensity = 30000u;
+  }
+
+  if (YAML::Node samples = node["photon_samples"]) {
+    value.photon_samples = samples.as<unsigned>();
+  } else {
+    value.photon_samples = 10000000u;
+  }
+
   return value;
 }
 
@@ -396,6 +409,12 @@ scene_t load_scene_from_file(const char* scene_file) {
     s.sample_count = samples.as<unsigned>();
   } else {
     s.sample_count = 1u;
+  }
+
+  if (YAML::Node enabled = config["photon_mapping"]) {
+    s.photon_mapping_enabled = enabled.as<bool>();
+  } else {
+    s.photon_mapping_enabled = false;
   }
 
   if (YAML::Node geometry = config["geometry"]) {

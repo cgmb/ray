@@ -15,6 +15,8 @@ struct resolution_t {
 struct light_t {
   vec3f position;
   vec3f color;
+  unsigned intensity; // photon-mapping
+  unsigned photon_samples; // photon-mapping
 };
 
 struct material_t {
@@ -34,6 +36,7 @@ struct material_t {
 struct scene_t {
   resolution_t res;
   unsigned sample_count;
+  bool photon_mapping_enabled;
 
   vec3f observer;
   vec3f screen_top_left;
