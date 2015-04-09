@@ -279,8 +279,20 @@ void create_photon_map(const scene_t& s) {
   std::cout << "Finished photon map." << std::endl;
 }
 
+/* normal: normalized direction from surface outwards
+   to_light: normalized direction from surface to light
+*/
 float matte(vec3f normal, vec3f to_light) {
   return std::max(dot(normal, to_light), 0.f);
+}
+
+/* normal: normalized direction from surface outwards
+   to_light: normalized direction from surface to light
+   eye: normalized direction from eye to surface
+   n: the power to raise the specular component to (higher = shinier)
+*/
+float specular(vec3f normal, vec3f to_light, vec3f eye, float n) {
+  return std::pow(std::max(dot(eye, reflected(to_light, normal)), 0.f), n);
 }
 
 /* Casts a ray into the scene and returns a color.
@@ -332,11 +344,9 @@ vec3f cast_ray(const ray_t& ray,
           {
             // phong shading
             vec3f normal = rsi.near_geometry_it->normal_at(pos);
-            float matte_light = //matte(normalized(normal), light_ray.direction);
-              std::max(dot(normalized(normal), light_ray.direction), 0.f);
-            float specular_light = std::pow(std::max(
-              dot(ray.direction, reflected(light_ray.direction, normalized(normal))),
-              0.f), material.k_specular_n);
+            float matte_light = matte(normalized(normal), light_ray.direction);
+            float specular_light = specular(normalized(normal), light_ray.direction,
+              ray.direction, material.k_specular_n);
             light_color += one_light_color *
               (material.k_matte * matte_light +
               material.k_specular * specular_light);
@@ -419,11 +429,9 @@ vec3f cast_ray(const ray_t& ray,
           {
             // phong shading
             vec3f normal = rmi.get_normal_at(pos);
-            float matte_light =
-              std::max(dot(normal, light_ray.direction), 0.f);
-            float specular_light = std::max(std::pow(
-              dot(ray.direction, reflected(-ray.direction, normal)),
-              material.k_specular_n), 0.f);
+            float matte_light = matte(normal, light_ray.direction);
+            float specular_light = specular(normal, light_ray.direction, ray.direction,
+                                            material.k_specular_n);
             light_color += one_light_color *
               (material.k_matte * matte_light +
               material.k_specular * specular_light);
