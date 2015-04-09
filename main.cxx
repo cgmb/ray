@@ -335,13 +335,14 @@ vec3f cast_ray(const ray_t& ray,
 
       if (solid_component > 0.f) {
         vec3f light_color(0,0,0);
+        bool is_shadowed = false;
         for (const light_t& light : s.lights) {
           ray_t light_ray = { pos, normalized(light.position - pos) };
           vec3f one_light_color = cast_ray(light_ray, s, light.color,
             CAST_TO_LIGHT, refractive_index, recursion_depth + 1u);
-          if (one_light_color != vec3f(0,0,0) &&
-            (material.k_matte > 0.f || material.k_specular > 0.f))
-          {
+          if (one_light_color == vec3f(0,0,0)) {
+            is_shadowed = true;
+          } else if (material.k_matte > 0.f || material.k_specular > 0.f) {
             // phong shading
             vec3f normal = rsi.near_geometry_it->normal_at(pos);
             float matte_light = matte(normalized(normal), light_ray.direction);
@@ -350,23 +351,26 @@ vec3f cast_ray(const ray_t& ray,
             light_color += one_light_color *
               (material.k_matte * matte_light +
               material.k_specular * specular_light);
-          } else if (one_light_color == vec3f(0,0,0)) {
-            // check photon map
-            vec3f intersect = ray.position_at(rsi.t);
-            // todo: do we need to account for the side we're on?
-            vec3f normal = normalized(rsi.near_geometry_it->normal_at(intersect));
-            size_t sphere_idx = rsi.index_in(s.geometry.spheres);
-            for (const photon_hit& photon : g_photon_hits.sphere_hits[sphere_idx]) {
-              float dist = magnitude(photon.position - intersect);
-              if (dist < 1.f) {
-                one_light_color += photon.color *
-                  sqrt(1.f - dist) * matte(normal, -photon.direction);
-              }
-            }
           }
           // normal / observer independant lighting
           // it's fast and looks nice for some things
           light_color += material.k_flat * one_light_color;
+        }
+        if (is_shadowed) {
+          // check photon map
+          vec3f intersect = ray.position_at(rsi.t);
+          // todo: do we need to account for the side we're on?
+          vec3f normal = normalized(rsi.near_geometry_it->normal_at(intersect));
+          size_t sphere_idx = rsi.index_in(s.geometry.spheres);
+          for (const photon_hit& photon : g_photon_hits.sphere_hits[sphere_idx]) {
+            float dist = magnitude(photon.position - intersect);
+            if (dist < 0.25f) {
+              dist *= 4;
+              float dist_sq = dist * dist;
+              light_color += photon.color *
+                (1.f - dist_sq) * matte(normal, -photon.direction);
+            }
+          }
         }
         // add the combined flat/specular/matte lights wih ambient light
         color += solid_component * material_color * light_color;
@@ -420,13 +424,14 @@ vec3f cast_ray(const ray_t& ray,
 
       if (solid_component > 0.f) {
         vec3f light_color(0,0,0);
+        bool is_shadowed = false;
         for (const light_t& light : s.lights) {
           ray_t light_ray = { pos, normalized(light.position - pos) };
           vec3f one_light_color = cast_ray(light_ray, s, light.color,
             CAST_TO_LIGHT, refractive_index, recursion_depth + 1u);
-          if (one_light_color != vec3f(0,0,0) &&
-            (material.k_matte > 0.f || material.k_specular > 0.f))
-          {
+          if (one_light_color == vec3f(0,0,0)) {
+            is_shadowed = true;
+          } else if (material.k_matte > 0.f || material.k_specular > 0.f) {
             // phong shading
             vec3f normal = rmi.get_normal_at(pos);
             float matte_light = matte(normal, light_ray.direction);
@@ -435,22 +440,25 @@ vec3f cast_ray(const ray_t& ray,
             light_color += one_light_color *
               (material.k_matte * matte_light +
               material.k_specular * specular_light);
-          } else if (one_light_color == vec3f(0,0,0)) {
-            // check photon map
-            vec3f intersect = ray.position_at(rmi.t);
-            vec3f normal = normalized(rmi.get_normal_at(intersect));
-            size_t mesh_idx = rmi.index_in(s.geometry.meshes);
-            for (const photon_hit& photon : g_photon_hits.mesh_hits[mesh_idx]) {
-              float dist = magnitude(photon.position - intersect);
-              if (dist < 1.f) {
-                one_light_color += photon.color *
-                  sqrt(1.f - dist) * matte(normal, -photon.direction);
-              }
-            }
           }
           // normal / observer independant lighting
           // it's fast and looks nice for some things
           light_color += material.k_flat * one_light_color;
+        }
+        if (is_shadowed) {
+          // check photon map
+          vec3f intersect = ray.position_at(rmi.t);
+          vec3f normal = normalized(rmi.get_normal_at(intersect));
+          size_t mesh_idx = rmi.index_in(s.geometry.meshes);
+          for (const photon_hit& photon : g_photon_hits.mesh_hits[mesh_idx]) {
+            float dist = magnitude(photon.position - intersect);
+            if (dist < 0.25f) {
+              dist *= 4;
+              float dist_sq = dist * dist;
+              light_color += photon.color *
+                sqrt(1.f - dist_sq) * matte(normal, -photon.direction);
+            }
+          }
         }
         color += solid_component * material_color * light_color;
         color += solid_component * material_color * material.k_ambient * s.ambient_light;
