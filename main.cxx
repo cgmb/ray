@@ -253,6 +253,8 @@ void create_photon_map(const scene_t& s) {
   std::uniform_real_distribution<float> distribution(-1.f, 1.f);
   auto rng = std::bind(distribution, engine);
 
+  std::cout << "Creating photon map..." << std::endl;
+  std::cout << "Lights: " << s.lights.size() << std::endl;
   for (const light_t& light : s.lights) {
     float intensity = light.intensity;
     size_t samples = light.photon_samples;
@@ -266,14 +268,15 @@ void create_photon_map(const scene_t& s) {
       map_photon(ray, s, energy, refractive_index, indirect, recursion_depth);
     }
   }
-  std::cout << g_photon_hits.sphere_hits.size() << std::endl;
-  std::cout << g_photon_hits.mesh_hits.size() << std::endl;
+  std::cout << "Spheres: " << g_photon_hits.sphere_hits.size() << std::endl;
   for (auto&& v : g_photon_hits.sphere_hits) {
-    std::cout << v.size() << std::endl;
+    std::cout << "Hits: " << v.size() << std::endl;
   }
+  std::cout << "Meshes: " << g_photon_hits.mesh_hits.size() << std::endl;
   for (auto&& v : g_photon_hits.mesh_hits) {
-    std::cout << v.size() << std::endl;
+    std::cout << "Hits: " << v.size() << std::endl;
   }
+  std::cout << "Finished photon map." << std::endl;
 }
 
 float matte(vec3f normal, vec3f to_light) {
