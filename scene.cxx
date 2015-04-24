@@ -269,7 +269,7 @@ std::vector<light_t> parse_sphere_light_node(const YAML::Node& node) {
 
 void load_md2(const std::string& filename,
   std::vector<vec3f>& vertexes,
-  std::vector<unsigned short>& indexes)
+  std::vector<unsigned int>& indexes)
 {
   MD2 model;
   if (!model.LoadModel(filename.c_str())) {
@@ -285,7 +285,7 @@ void load_md2(const std::string& filename,
   indexes.resize(index_count);
   for (int i = 0; i < model.num_tris; ++i) {
     for (int j = 0; j < 3; ++j) {
-      short index = model.tris[i].index_xyz[j];
+      int index = model.tris[i].index_xyz[j];
       if (index < 0) {
         throw std::runtime_error("Invalid index value!");
       }
@@ -321,7 +321,7 @@ void apply_transform(const YAML::Node& node,
 
 mesh_t parse_mesh_node(const YAML::Node& node) {
   std::vector<vec3f> v;
-  std::vector<unsigned short> i;
+  std::vector<unsigned int> i;
 
   if (node["vertexes"] || node["indexes"]) {
     if (YAML::Node vertexes = node["vertexes"]) {
@@ -334,10 +334,10 @@ mesh_t parse_mesh_node(const YAML::Node& node) {
 
     if (YAML::Node indexes = node["indexes"]) {
       for (auto it = indexes.begin(); it != indexes.end(); ++it) {
-        i.push_back(it->as<unsigned short>());
+        i.push_back(it->as<unsigned int>());
       }
     } else { 
-      unsigned short auto_index = 0u;
+      unsigned int auto_index = 0u;
       for (auto it = v.begin(); it != v.end(); ++it) {
         i.push_back(auto_index++);
       }

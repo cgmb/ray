@@ -83,7 +83,7 @@ struct mesh_t {
 
   mesh_t(
     const std::vector<vec3f>& vertexes,
-    const std::vector<unsigned short>& indexes,
+    const std::vector<unsigned int>& indexes,
     bool smooth = false)
     : vertexes(vertexes)
     , indexes(indexes)
@@ -91,7 +91,7 @@ struct mesh_t {
     , face_normals(indexes.size() / 3u)
     , smooth(smooth)
   {
-    assert(vertexes.size() <= std::numeric_limits<unsigned short>::max());
+    assert(vertexes.size() <= std::numeric_limits<unsigned int>::max());
     calculate_normals();
     calculate_bounding_sphere();
   }
@@ -101,9 +101,9 @@ struct mesh_t {
     // also calculate face centers
     std::fill(vertex_normals.begin(), vertex_normals.end(), vec3f(0,0,0));
     for (size_t i = 0u; i < face_normals.size(); ++i) {
-      unsigned short i1 = indexes[3*i];
-      unsigned short i2 = indexes[3*i + 1];
-      unsigned short i3 = indexes[3*i + 2];
+      unsigned int i1 = indexes[3*i];
+      unsigned int i2 = indexes[3*i + 1];
+      unsigned int i3 = indexes[3*i + 2];
 
       vec3f normal = -triangle_normal(
         vertexes[i1], vertexes[i2], vertexes[i3]);
@@ -124,7 +124,7 @@ struct mesh_t {
   }
 
   std::vector<vec3f> vertexes;
-  std::vector<unsigned short> indexes;
+  std::vector<unsigned int> indexes;
   std::vector<vec3f> vertex_normals;
   std::vector<vec3f> face_normals;
   sphere_t bounding_sphere;
@@ -317,9 +317,9 @@ struct ray_mesh_intersect {
 
       // use barycentric coordinates.
       // we probably should have used those for intersection tests
-      unsigned short i1 = near_geometry_it->indexes[3u * near_face_index];
-      unsigned short i2 = near_geometry_it->indexes[3u * near_face_index + 1];
-      unsigned short i3 = near_geometry_it->indexes[3u * near_face_index + 2];
+      unsigned int i1 = near_geometry_it->indexes[3u * near_face_index];
+      unsigned int i2 = near_geometry_it->indexes[3u * near_face_index + 1];
+      unsigned int i3 = near_geometry_it->indexes[3u * near_face_index + 2];
       vec3f v1 = near_geometry_it->vertexes[i1];
       vec3f v2 = near_geometry_it->vertexes[i2];
       vec3f v3 = near_geometry_it->vertexes[i3];

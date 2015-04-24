@@ -204,14 +204,16 @@ void map_photon(const ray_t& ray, const scene_t& s, const vec3f& energy,
     if(material.opacity < 1.f) {
       vec3f inside_pos = ray.position_at(rsi.t + BACKOFF);
       vec3f normal = rsi.near_geometry_it->normal_at(inside_pos);
+      bool entering = true;
       if (dot(ray.direction, normal) > 0.f) {
         normal = -normal;
+        entering = false;
       }
+      float new_refractive_index = entering ? material.refractive_index : 1.f;
       ray_t refracted_ray = { inside_pos, refracted(ray.direction, normal,
-        refractive_index, material.refractive_index) };
+        refractive_index, new_refractive_index) };
       if (recursion_depth < MAX_RECURSE) {
-        // todo: handle refractive index for leaving a volume
-        map_photon(refracted_ray, s, energy, material.refractive_index, true,
+        map_photon(refracted_ray, s, energy, new_refractive_index, true,
           recursion_depth + 1u);
       } else {
         std::cerr << "Hit max recurse depth!" << std::endl;
@@ -229,6 +231,7 @@ void map_photon(const ray_t& ray, const scene_t& s, const vec3f& energy,
       if (dot(ray.direction, normal) > 0.f) {
         normal = -normal;
       }
+      // todo: handle refractive index for leaving a volume
       ray_t refracted_ray = { inside_pos, refracted(ray.direction, normal,
         refractive_index, material.refractive_index) };
       if (recursion_depth < MAX_RECURSE) {
