@@ -1,4 +1,12 @@
-Implemented features:
+# Ray
+ A simple raytracer. YAML goes in, PNG comes out.
+
+# Example Output
+![a green and rough metalic sphere floating over a checkerboard, casting two shadows](examples/sphere_checkerboard.png)
+![Boba Fett in front of a funhouse mirror](examples/smooth_mesh.png)
+![a glass sphere in front of a black-and-white patterned sphere and a dark (mirrored) sphere, casting shadows onto a blue square](examples/nonphoto_refract.png)
+
+## Implemented features
 - Object types: spheres, triangle mesh
 - Shadows
 - Reflections (recursive)
@@ -7,7 +15,8 @@ Implemented features:
 - Output format: (to file, png)
 - Multithreaded rendering
 
-To build:
+
+## To Build
 The 3rdparty dependency, libyaml-cpp, must be built seperately. Navigate to
 the 3rdparty directory and run the build script. It was tested to build
 correctly on the lab computers. Hopefully it just works for you. If not, the
@@ -16,14 +25,14 @@ should fix the problem.
 
 With the 3rdparty libraries built, make will build the main software.
 
-###Script###
+```
 cd 3rdparty;
 ./build.sh
 cd ..
 make
-############
+```
 
-To run:
+## To Run
 The 'run' script is used to setup the environment for the main program.
 e.g.
 ./run ./ray [options]
